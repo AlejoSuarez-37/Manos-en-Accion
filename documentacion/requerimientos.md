@@ -2,7 +2,7 @@
 
 > **Versión del documento:** 1.0
 
-> **Fecha:** 2026-06-25
+> **Fecha:** 2026-11-16
 
 > **Autor(es):** Alejo Suarez / Matias Fernandez / Agustin Begue
 
@@ -22,7 +22,8 @@
 
 | Versión | Fecha      | Autor          | Descripción del Cambio          |
 |---------|------------|----------------|---------------------------------|
-| 1.0     | 2026-05-04 | [Alejo Suarez] | Versión inicial del documento   |
+| 1.0     | 2026-11-16 | [Alejo Suarez] | Versión inicial del documento   |
+| 1.1     | 2026-11-17 | [Alejo Suarez] | Incorporación del RF-008 al RF-015 |   
 
 ---
 
@@ -77,6 +78,8 @@ El sistema debe permitir dar de alta, modificar datos (nombre, rol/cargo, breve 
 - [x] Una vez dado de baja un integrante, su perfil debe dejar de renderizarse automáticamente en la vista pública de la sección "Equipo".
 - [x] El servidor debe retornar 201 Created tras el alta de un nuevo miembro, 200 OK tras la actualización y 204 No Content despues de una baja exitosa.
 
+---
+
 ### RF-003 — Módulo de Talleres y Ejes de Acción
 
 | Campo         | Detalle        |
@@ -100,6 +103,8 @@ El sistema debe permitir publicar y administrar talleres e iniciativas clasifica
 - [x] El administrador debe poder cambiar el estado de un taller (ej. de activo a finalizado/inactivo) sin perder su registro histórico en la base de datos.
 - [x] El servidor debe retornar 400 Bad Request si se intenta registrar un taller sin un eje de acción asociado o con datos inválidos.
 
+---
+
 ### RF-004 — Gestión de Adjuntos PDF
 
 | Campo         | Detalle        |
@@ -122,6 +127,8 @@ El sistema debe permitir la carga directa de archivos en formato PDF y asociarlo
 - [x] Si se intenta subir un archivo con un formato distinto a PDF, el sistema debe rechazar la carga y mostrar un mensaje de error descriptivo.
 - [x] En la vista pública del taller, proyecto o sección asociada, debe renderizarse un botón de descarga que permita abrir o descargar el PDF directamente.
 - [x] El servidor debe retornar 415 Unsupported Media Type si el archivo enviado no es un PDF válido y 201 Created cuando el adjunto se sube y asocia correctamente.
+
+---
 
 ### RF-005 — Módulo de Marcas y Patrocinadores
 
@@ -147,6 +154,8 @@ El sistema debe permitir cargar, actualizar y remover los logotipos y nombres de
 - [x] El servidor debe retornar 201 Created al dar de alta una nueva marca y 200 OK al actualizarla.
 - [x] El servidor debe retornar 204 No Content al eliminar una marca exitosamente.
 
+---
+
 ### RF-006 — Banner en Carrusel de la Landing Page
 
 | Campo         | Detalle        |
@@ -169,6 +178,8 @@ El sistema debe permitir cargar múltiples imágenes destinadas al banner princi
 - [x] El administrador debe poder cargar nuevas imágenes, modificar su orden de visualización y eliminar imágenes existentes desde el panel de gestión.
 - [x] Si existe una única imagen activa en el carrusel, esta debe mostrarse de forma estática sin generar errores de transición cíclica.
 - [x] El servidor debe retornar 201 Created al subir un nuevo banner y 200 OK al actualizar el orden o eliminar una diapositiva.
+
+---
 
 ### RF-007 — Sanitización y Estandarización de Imágenes
 
@@ -193,8 +204,207 @@ Todas las imágenes subidas a la plataforma deberán ajustarse a un formato y di
 - [x] Si una imagen no cumple con las dimensiones mínimas exigidas (o si se aplica recorte/redimensionamiento automático), el sistema debe notificar al usuario o ajustar la imagen manteniendo la relación de aspecto sin distorsionarla.
 - [x] El servidor debe retornar 400 Bad Request o 415 Unsupported Media Type si se intenta subir un archivo corrupto o con un MIME type no permitido.
 
+---
 
+### RF-008 — Visitantes Públicos y Donaciones
 
+| Campo         | Detalle        |
+|---------------|----------------|
+| **ID**        | RF-008         |
+| **Nombre**    | Visitantes Públicos y Donaciones |
+| **Tipo**      | Funcional      |
+| **Prioridad** | `Alta`         |
+| **Estado**    | `Pendiente`    |
 
+#### Descripción
+> Los usuarios externos o visitantes que accedan a la plataforma pública podrán explorar las diferentes secciones informativas (noticias, talleres, equipo, etc.) y realizar aportes económicos o donaciones de forma directa, sin necesidad de pasar por un proceso previo de registro o inicio de sesión.
+
+```
+El sistema debe permitir a cualquier visitante público navegar por el contenido informativo del sitio web y realizar transacciones de donación sin requerir autenticación ni un registro previo de cuenta de usuario, garantizando un flujo de donación rápido, accesible y sin fricciones.
+```
+
+#### Criterios de Aceptación
+- [x] El sistema debe permitir el acceso sin restricciones de autenticación a todas las vistas públicas (Landing Page, noticias, talleres, sobre nosotros, aliados).
+- [x] El flujo de donación debe estar disponible para usuarios no autenticados, solicitando únicamente los datos indispensables para procesar el pago o registrar la contribución (ej. nombre opcional, correo electrónico para comprobante y datos de pago).
+- [x] El servidor no debe exigir token de sesión ni credenciales de usuario para procesar las solicitudes de lectura de contenidos públicos o registro de donaciones de invitados.
+- [x] El servidor debe retornar el código HTTP 200 OK al consultar páginas públicas y 201 Created al registrar con éxito una donación realizada por un visitante.
+
+---
+
+### RF-009 — Rol Administrador
+
+| Campo         | Detalle        |
+|---------------|----------------|
+| **ID**        | RF-009         |
+| **Nombre**    | Rol Administrador |
+| **Tipo**      | Funcional      |
+| **Prioridad** | `Alta`         |
+| **Estado**    | `Pendiente`    |
+
+#### Descripción
+> El usuario con rol Administrador dispondrá de acceso total al panel de control, donde podrá gestionar contenidos dinámicos, administrar credenciales de pasarelas de pago/donación, modificar su propia contraseña y dar de alta o gestionar cuentas de usuarios con rol "Editor".
+
+```
+El sistema debe permitir que un usuario autenticado con rol "Administrador" edite todos los contenidos dinámicos del sitio, modifique su contraseña personal, cree y configure nuevos usuarios con el rol "Editor" (asignándoles nombre de usuario y contraseña) y modifique las credenciales de recepción de donaciones de la plataforma.
+```
+
+#### Criterios de Aceptación
+- [x] El sistema debe validar que solo los usuarios con rol Administrador puedan acceder a la sección de gestión de usuarios, creación de editores y configuración de credenciales de donación.
+- [x] Al crear un nuevo usuario con rol Editor, el sistema debe exigir un nombre de usuario único, un correo electrónico válido y una contraseña segura, asociándoles correctamente el rol correspondiente.
+- [x] El administrador debe poder actualizar las credenciales de las pasarelas o métodos de recepción de donaciones de forma segura, reflejándose en el procesamiento de pagos de manera inmediata.
+- [x] El servidor debe retornar 201 Created al registrar un nuevo editor y 200 OK al actualizar contenidos, credenciales o la contraseña propia.
+
+---
+
+### RF-010 — Rol Editor
+
+| Campo         | Detalle        |
+|---------------|----------------|
+| **ID**        | RF-010         |
+| **Nombre**    | Rol Editor     |
+| **Tipo**      | Funcional      |
+| **Prioridad** | `Media`        |
+| **Estado**    | `Pendiente`    |
+
+#### Descripción
+> El usuario con rol Editor ingresará al panel de administración con credenciales restringidas, donde su única función autorizada será la gestión y actualización de los contenidos dinámicos del portal y la modificación de su clave de acceso personal.
+
+```
+El sistema debe limitar las capacidades de los usuarios con rol "Editor" exclusivamente a la administración, creación, edición y previsualización de contenidos dinámicos (noticias, talleres, equipo, etc.) y a la modificación de su propia contraseña, bloqueando el acceso a la gestión de usuarios, configuración del sistema y credenciales financieras.
+```
+
+#### Criterios de Aceptación
+- [x] El panel de control debe ocultar o denegar el acceso a las opciones de administración de usuarios y configuración de donaciones para cualquier usuario autenticado bajo el rol Editor.
+- [x] El editor debe poder realizar las operaciones permitidas sobre los módulos de contenido (crear, editar, listar noticias, talleres, equipo, etc.) sin restricciones operativas en esas áreas.
+- [x] El sistema debe permitir que el editor cambie su contraseña actual ingresando su clave anterior y una nueva contraseña que cumpla con los requisitos de seguridad.
+- [x] El servidor debe retornar el código HTTP 403 Forbidden si un usuario con rol Editor intenta acceder a endpoints o rutas exclusivas del rol Administrador.
+
+---
+
+### RF-011 — Integración por API con Mercado Pago
+
+| Campo         | Detalle        |
+|---------------|----------------|
+| **ID**        | RF-011         |
+| **Nombre**    | Integración por API con Mercado Pago |
+| **Tipo**      | Funcional      |
+| **Prioridad** | `Alta`         |
+| **Estado**    | `Pendiente`    |
+
+#### Descripción
+> El visitante interesado en colaborar económicamente accederá a la sección de donaciones, donde seleccionará o ingresará el monto deseado bajo la opción principal por defecto (Mercado Pago). Al confirmar la acción, el sistema generará una preferencia de pago mediante la API y redirigirá al usuario hacia la pasarela externa de Mercado Pago para completar la transacción.
+
+```
+El sistema debe integrar el flujo de Checkout mediante la API oficial de Mercado Pago como método de donación principal por defecto. Al iniciar una donación, el backend deberá generar la preferencia de pago utilizando las credenciales vigentes configuradas por el administrador y redirigir al donante a la plataforma de Mercado Pago, procesando posteriormente el retorno y la confirmación del estado de la transacción.
+```
+
+#### Criterios de Aceptación
+- [x] La opción de Mercado Pago debe presentarse seleccionada o destacada como método de donación principal por defecto en la interfaz de aportes.
+- [x] El sistema debe validar que el monto de donación ingresado sea un valor numérico positivo mayor a cero antes de invocar la API de Mercado Pago.
+- [x] Al confirmar el aporte, el servidor debe generar la preferencia de pago con las credenciales configuradas y redirigir correctamente al usuario al entorno de Checkout de Mercado Pago (init_point).
+- [x] El sistema debe contemplar URLs de retorno (success, failure, pending) para informar al donante el resultado de su operación al volver al sitio web.
+- [x] El servidor debe retornar 200 OK o 201 Created junto con la URL de redirección al generar la preferencia exitosamente, y 502 Bad Gateway o 400 Bad Request si ocurre un error de comunicación o credenciales inválidas con la API externa.
+
+---
+
+### RF-012 — Medios de Pago Alternativos
+
+| Campo         | Detalle        |
+|---------------|----------------|
+| **ID**        | RF-012         |
+| **Nombre**    | Medios de Pago Alternativos |
+| **Tipo**      | Funcional      |
+| **Prioridad** | `Media`        |
+| **Estado**    | `Pendiente`    |
+
+#### Descripción
+> Dentro de la misma sección de donaciones, el visitante visualizará un bloque informativo estructurado con las alternativas disponibles fuera de Mercado Pago, donde podrá consultar y copiar los datos bancarios locales o acceder mediante enlaces directos a las plataformas externas "Donar Online" y "Help".
+
+```
+El sistema debe disponer de una sección clara, visible y organizada dentro del módulo de donaciones que brinde la información completa y los accesos directos correspondientes para efectuar aportes mediante Transferencia Bancaria (datos de cuenta, CBU/CVU, Alias, CUIT/Titular), así como los enlaces hacia las plataformas externas "Donar Online" (donaciones recurrentes/locales) y "Help" (canal destinado a donaciones internacionales).
+```
+
+#### Criterios de Aceptación
+- [x] La sección de medios alternativos debe mostrar de forma legible todos los datos necesarios para realizar una Transferencia Bancaria (Banco, Tipo de cuenta, Titular, CUIT, CBU/CVU y Alias), incluyendo una acción rápida para copiar dichos datos al portapapeles.
+- [x] El sitio debe incluir botones o enlaces claramente identificados que redirijan en una nueva pestaña hacia las plataformas externas Donar Online y  El sitio debe incluir botones o enlaces claramente identificados que redirijan en una nueva pestaña hacia las plataformas externas Donar Online y Help (especificando que esta última corresponde a donaciones internacionales).
+- [x] El administrador debe poder actualizar los datos bancarios y las URLs de acceso de estos medios alternativos desde el panel de configuración sin requerir cambios en el código fuente.
+- [x] Todos los enlaces externos deben abrirse de forma segura sin hacer que el usuario pierda la sesión o contexto de navegación en el sitio institucional.
+
+---
+
+### RF-013 — Botón Flotante de WhatsApp
+
+| Campo         | Detalle        |
+|---------------|----------------|
+| **ID**        | RF-013         |
+| **Nombre**    | Botón Flotante de WhatsApp |
+| **Tipo**      | Funcional      |
+| **Prioridad** | `Media`        |
+| **Estado**    | `Pendiente`    |
+
+#### Descripción
+> Durante su navegación por cualquier vista pública de la plataforma, el visitante visualizará un botón flotante ubicado de forma fija en la esquina inferior de la pantalla. Al seleccionarlo, el sistema abrirá la aplicación o versión web de WhatsApp iniciando un chat directo con la línea de atención oficial de la organización.
+
+```
+El sistema debe integrar un widget flotante persistente en la interfaz pública del sitio web que redirija mediante enlace oficial o API de WhatsApp hacia el número telefónico oficial configurado por la ONG, permitiendo iniciar una conversación directa con un mensaje predeterminado opcional.
+```
+
+#### Criterios de Aceptación
+- [x] El botón flotante de WhatsApp debe mantenerse visible y accesible de manera fija (posición fixed) en todas las vistas públicas, sin obstruir elementos críticos de navegación o botones de acción.
+- [x] Al hacer clic en el widget, se debe abrir una nueva pestaña (target="_blank" con rel="noopener noreferrer") redirigiendo a la URL oficial de WhatsApp con el número telefónico institucional correctamente formateado (código de país incluido).
+- [x] El widget no debe renderizarse dentro del panel privado de administración/edición para evitar interferencias visuales en la gestión interna.
+- [x] El número telefónico oficial asociado al enlace debe poder ser actualizado desde la configuración del panel administrativo sin requerir modificaciones en el código fuente.
+
+---
+
+### RF-014 — Contacto Empresarial
+
+| Campo         | Detalle        |
+|---------------|----------------|
+| **ID**        | RF-014         |
+| **Nombre**    | Contacto Empresarial |
+| **Tipo**      | Funcional      |
+| **Prioridad** | `Alta`         |
+| **Estado**    | `Pendiente`    |
+
+#### Descripción
+> Las empresas, instituciones o potenciales aliados accederán a la sección de contacto del sitio, donde encontrarán un formulario dedicado para consultas corporativas con campos para correo electrónico, título/asunto y mensaje. Al enviarlo, el sistema remitirá el correo directamente a la casilla oficial de la ONG.
+
+```
+El sistema debe proveer un formulario en la sección de contacto destinado a consultas empresariales o institucionales, compuesto por campos obligatorios para correo electrónico del remitente, título (asunto) y cuerpo de texto. Al confirmar el envío, el servidor procesará la solicitud y enviará un correo electrónico a la dirección oficial configurada por la asociación, incluyendo el remitente como dirección de respuesta (Reply-To).
+```
+
+#### Criterios de Aceptación
+- [x] El formulario debe validar en cliente y servidor que los campos de correo electrónico, título y cuerpo del mensaje estén completos y que el e-mail cumpla con un formato válido.
+- [x] Al enviarse correctamente, el sistema debe despachar un correo electrónico a la casilla oficial de la ONG con el título ingresado por el usuario y los datos del remitente.
+- [x] La interfaz debe mostrar una notificación clara de confirmación de envío exitoso y limpiar los campos del formulario para evitar envíos duplicados accidentales.
+- [x] El servidor debe retornar el código HTTP 200 OK cuando el correo se envíe satisfactoriamente, 400 Bad Request si existen errores de validación y 502 Bad Gateway o 500 Internal Server Error si falla el servicio de mensajería SMTP/API.
+
+---
+
+### RF-015 — Contacto Voluntario
+
+| Campo         | Detalle        |
+|---------------|----------------|
+| **ID**        | RF-015         |
+| **Nombre**    | Contacto Voluntario |
+| **Tipo**      | Funcional      |
+| **Prioridad** | `Alta`         |
+| **Estado**    | `Pendiente`    |
+
+#### Descripción
+> Las personas interesadas en sumarse como voluntarias accederán al formulario correspondiente dentro de la sección de contacto o voluntariado, donde ingresarán su dirección de correo electrónico y una presentación o mensaje en el cuerpo de texto. El sistema enviará dicha postulación automáticamente a la casilla de la ONG bajo un asunto estandarizado.
+
+```
+El sistema debe habilitar un formulario específico para postulantes a voluntariado que solicite obligatoriamente el correo electrónico del interesado y el cuerpo del mensaje. Al enviarse el formulario, el sistema despachará un correo electrónico a la casilla oficial de la ONG estableciendo de forma automática y predefinida el asunto exacto "Postulante a Voluntariado".
+```
+
+#### Criterios de Aceptación
+- [x] El formulario debe exigir el ingreso de un correo electrónico con formato válido y un cuerpo de mensaje no vacío antes de habilitar o procesar el envío.
+- [x] El correo electrónico generado hacia la ONG debe contener obligatoriamente el asunto predefinido "Postulante a Voluntariado" sin requerir que el usuario lo escriba manualmente.
+- [x] El mensaje recibido por la organización debe incluir claramente el correo electrónico del postulante (y configurarlo en el encabezado Reply-To) para facilitar la respuesta directa.
+- [x] El servidor debe retornar 200 OK tras procesar y enviar la postulación exitosamente, y 400 Bad Request si alguno de los campos requeridos es inválido o está vacío.
+
+---
 
 ## Requerimientos No Funcionales
