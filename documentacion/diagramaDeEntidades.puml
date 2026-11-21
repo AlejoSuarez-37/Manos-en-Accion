@@ -1,0 +1,118 @@
+@startuml diagrama_de_entidades
+
+enum UserRole {
+    ADMIN
+    EDITOR
+}
+
+class User {
+    - id: number
+    - name: string
+    - email: string
+    - password: string
+    - role: UserRole
+}
+
+enum Category {
+    // queda para preguntarle a la ONG 
+    para que nos hagan saber que tipo de noticias necesitan
+}
+
+class Publication {
+    - title: string
+    - subTitle: string
+    - category: Category
+    - body: string
+    - author: User
+    - publicationDate: Date
+    - image: string
+}
+
+class TeamMember {
+    - name: string
+    - lastName: string
+    - role: string
+    - image: string
+}
+
+enum Status {
+    ACTIVE
+    INACTIVE
+}
+
+class Workshop {
+    - title: string
+    - description: string
+    - image: string
+    - status: Status // Esto hay que consultarle a la ONG si es que es requerido
+    - pdf: string | null
+}
+
+class FocusArea {
+    - image: string
+    - description: string
+    - workshops: Workshop[]
+}
+
+class Donation {
+    // Queda a definir todos juntos mas tarde cuando se valla a implementar.
+}
+
+class Configuration {
+    - configurations: Map[
+    contactEmail | string,
+    phoneNumber | string,
+    mercadoPagoAlias | string,
+    CBU | string
+    ]
+}
+
+
+' cloudfare
+class Image{
+    - key: string
+}
+
+class BannerImage {
+    - image: Image
+}
+
+class Sponsor {
+    - image: Image
+}
+
+
+' Notas
+
+note right of Publication
+    "image" apunta a una ubicacion 
+    en la base de datos de imagenes(por ahora definimos cloudfare).
+end note
+
+note right of BannerImage
+    El .service de "BannerImage" en vez de comunicarse con el repo de PostrgreSQL
+    con TypeOrm, se comunicara directamente con cloudfare a travez del "id" o "key" de la imagen.
+end note
+
+note left of Workshop
+    Los pdf se guardan de la misma forma que las imagenes,
+    guardamos una "key" o "id" que haga referencia al dato guardado en cloudfare.
+    El campo pdf podra estar vacio asi que implementar teniendo eso en cuenta.
+end note
+
+note right of Configuration 
+    Definir que esto solo sera configurable por el administrador.
+    Cuando implementemos mercado pago veremos si hay que guardar el alias o numero de cuenta.
+end note
+
+' Relaciones
+
+User *-- UserRole
+Publication *-- Category
+BannerImage *-- Image
+Sponsor *-l- Image
+Workshop *-- Status
+FocusArea *-- Workshop
+Donation *-- Configuration
+
+@enduml
