@@ -1,6 +1,7 @@
-import { Module } from '@nestjs/common';
+import { Module, StandardSchemaValidationPipe } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { APP_PIPE } from '@nestjs/core';
 import { AuthenticationModule, type Duration } from '@nestjs/authentication';
 import { AuthorizationModule } from '@nestjs/authorization';
 import { AppController } from './app.controller.js';
@@ -63,6 +64,9 @@ import { UsersModule } from './users/users.module.js';
     AuthModule,
   ],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [
+    AppService,
+    { provide: APP_PIPE, useClass: StandardSchemaValidationPipe },
+  ],
 })
 export class AppModule {}

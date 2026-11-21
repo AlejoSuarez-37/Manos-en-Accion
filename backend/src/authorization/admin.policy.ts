@@ -7,6 +7,14 @@ export class AdminPolicy {
     return user?.role === 'admin';
   }
 
+  manageEditor(user: User | null, target: User): boolean {
+    return (
+      user?.role === 'admin' &&
+      target.role === 'editor' &&
+      target.id !== user.id
+    );
+  }
+
   manageDonationCredentials(user: User | null): boolean {
     return user?.role === 'admin';
   }
