@@ -9,6 +9,7 @@ export default defineConfig({
     env: {
       NODE_ENV: 'test',
       CORS_ORIGIN: 'http://localhost:3000',
+      TEST_DATABASE_URL: 'postgresql://postgres:postgres@localhost:5432/manos_en_accion_test',
       JWT_SECRET: 'test-only-jwt-secret-of-at-least-32-bytes',
       JWT_ISSUER: 'manos-en-accion-api',
       JWT_AUDIENCE: 'manos-en-accion-admin',

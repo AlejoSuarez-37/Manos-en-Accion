@@ -7,7 +7,6 @@ const admin: User = {
   email: 'admin@manosenaccion.org',
   name: 'Admin',
   role: 'admin',
-  createdAt: new Date(),
 };
 
 const editor: User = {
@@ -15,7 +14,6 @@ const editor: User = {
   email: 'editor@manosenaccion.org',
   name: 'Editor',
   role: 'editor',
-  createdAt: new Date(),
 };
 
 describe('ContentPolicy', () => {
