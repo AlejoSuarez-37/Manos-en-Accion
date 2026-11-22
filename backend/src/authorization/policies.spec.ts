@@ -1,6 +1,6 @@
 import { AdminPolicy } from './admin.policy.js';
 import { ContentPolicy } from './content.policy.js';
-import type { User } from '../users/user.js';
+import type { User } from '../users/entities/user.entity.js';
 
 const admin: User = {
   id: 'admin-id',

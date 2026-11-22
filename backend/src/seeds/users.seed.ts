@@ -3,7 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import { PasswordHasher } from '@nestjs/authentication';
 import { Repository } from 'typeorm';
-import { User, normalizeEmail, type Role } from './user.js';
+import { User, normalizeEmail, type Role } from '../users/entities/user.entity.js';
 
 @Injectable()
 export class UsersSeed implements OnModuleInit {

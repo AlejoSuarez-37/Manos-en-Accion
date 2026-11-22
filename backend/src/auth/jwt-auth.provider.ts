@@ -6,7 +6,7 @@ import {
   type JwtClaims,
 } from '@nestjs/authentication';
 import { Repository } from 'typeorm';
-import { User } from '../users/user.js';
+import { User } from '../users/entities/user.entity.js';
 
 @Injectable()
 export class JwtAuthProvider extends JwtBearerProvider<User> {

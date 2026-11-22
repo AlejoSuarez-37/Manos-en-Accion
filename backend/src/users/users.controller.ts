@@ -11,7 +11,7 @@ import {
 import { CurrentUser } from '@nestjs/authentication';
 import { Can } from '@nestjs/authorization';
 import { AdminPolicy } from '../authorization/admin.policy.js';
-import type { User } from './user.js';
+import type { User } from './entities/user.entity.js';
 import { UsersService } from './users.service.js';
 import {
   createUserSchema,
@@ -19,7 +19,7 @@ import {
   userIdParamSchema,
   type CreateUserDto,
   type UpdateUserDto,
-} from './users.schemas.js';
+} from '../schemas/users.schemas.js';
 
 @Controller('users')
 export class UsersController {

@@ -9,8 +9,8 @@ import {
   type ChangePasswordDto,
   type LoginDto,
   type RefreshDto,
-} from './auth.schemas.js';
-import type { User } from '../users/user.js';
+} from '../schemas/auth.schemas.js';
+import type { User } from '../users/entities/user.entity.js';
 
 @Controller('auth')
 export class AuthController {

@@ -1,5 +1,5 @@
 import { Policy } from '@nestjs/authorization';
-import type { User } from '../users/user.js';
+import type { User } from '../users/entities/user.entity.js';
 
 @Policy()
 export class ContentPolicy {

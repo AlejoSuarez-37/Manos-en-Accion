@@ -7,7 +7,7 @@ import { PasswordHasher, TokenService } from '@nestjs/authentication';
 import { AuthorizationService } from '@nestjs/authorization';
 import { QueryFailedError, type Repository } from 'typeorm';
 import { AdminPolicy } from '../authorization/admin.policy.js';
-import type { User } from './user.js';
+import type { User } from './entities/user.entity.js';
 import { UsersService } from './users.service.js';
 
 const admin: User = {

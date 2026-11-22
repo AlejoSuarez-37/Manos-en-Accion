@@ -9,7 +9,7 @@ import { AppService } from './app.service.js';
 import { AuthModule } from './auth/auth.module.js';
 import { ContentPolicy } from './authorization/content.policy.js';
 import { AdminPolicy } from './authorization/admin.policy.js';
-import { envSchema } from './config/env.js';
+import { envSchema } from './schemas/env.schemas.js';
 import { CreateUsersTable1763740800000 } from './migrations/1763740800000-CreateUsersTable.js';
 import { UsersModule } from './users/users.module.js';
 

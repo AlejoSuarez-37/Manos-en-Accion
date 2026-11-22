@@ -8,8 +8,8 @@ import { PasswordHasher, TokenService } from '@nestjs/authentication';
 import { AuthorizationService } from '@nestjs/authorization';
 import { QueryFailedError, Repository } from 'typeorm';
 import { AdminPolicy } from '../authorization/admin.policy.js';
-import { User, normalizeEmail } from './user.js';
-import type { CreateUserDto, UpdateUserDto } from './users.schemas.js';
+import { User, normalizeEmail } from './entities/user.entity.js';
+import type { CreateUserDto, UpdateUserDto } from '../schemas/users.schemas.js';
 
 @Injectable()
 export class UsersService {

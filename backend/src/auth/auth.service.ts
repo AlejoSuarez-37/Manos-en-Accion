@@ -6,7 +6,7 @@ import {
   type IssuedTokens,
 } from '@nestjs/authentication';
 import { Repository } from 'typeorm';
-import { User, normalizeEmail } from '../users/user.js';
+import { User, normalizeEmail } from '../users/entities/user.entity.js';
 
 @Injectable()
 export class AuthService {
