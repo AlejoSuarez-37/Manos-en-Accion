@@ -10,6 +10,13 @@ import {
 } from '@nestjs/common';
 import { CurrentUser } from '@nestjs/authentication';
 import { Can } from '@nestjs/authorization';
+import {
+  ApiCreateUser,
+  ApiDeleteUser,
+  ApiFindAllUsers,
+  ApiFindOneUser,
+  ApiUpdateUser,
+} from './decorators/users-swagger.decorator.js';
 import { AdminPolicy } from '../authorization/admin.policy.js';
 import type { User } from './entities/user.entity.js';
 import { UsersService } from './users.service.js';
@@ -26,12 +33,14 @@ export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
   @Get()
+  @ApiFindAllUsers()
   @Can(AdminPolicy, 'manageEditors')
   findAll() {
     return this.usersService.findAll();
   }
 
   @Get(':id')
+  @ApiFindOneUser()
   @Can(AdminPolicy, 'manageEditors')
   findOne(@Param('id', { schema: userIdParamSchema }) id: string) {
     return this.usersService.findOne(id);
@@ -39,12 +48,14 @@ export class UsersController {
 
   @Post()
   @HttpCode(201)
+  @ApiCreateUser()
   @Can(AdminPolicy, 'manageEditors')
   create(@Body({ schema: createUserSchema }) input: CreateUserDto) {
     return this.usersService.create(input);
   }
 
   @Patch(':id')
+  @ApiUpdateUser()
   @Can(AdminPolicy, 'manageEditors')
   update(
     @CurrentUser() currentUser: User,
@@ -56,6 +67,7 @@ export class UsersController {
 
   @Delete(':id')
   @HttpCode(204)
+  @ApiDeleteUser()
   @Can(AdminPolicy, 'manageEditors')
   async remove(
     @CurrentUser() currentUser: User,
