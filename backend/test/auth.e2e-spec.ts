@@ -31,10 +31,12 @@ describe('Authentication (e2e)', () => {
   let app: INestApplication<App>;
   let server: App;
 
-  const adminEmail = 'admin@manosenaccion.org';
-  const adminPassword = 'AdminPassword123';
-  const editorEmail = 'editor@manosenaccion.org';
-  const editorPassword = 'EditorPassword123';
+  const adminEmail = process.env.SEED_ADMIN_EMAIL ?? 'admin@manosenaccion.org';
+  const adminPassword = process.env.SEED_ADMIN_PASSWORD ?? 'AdminPassword123';
+  const editorEmail =
+    process.env.SEED_EDITOR_EMAIL ?? 'editor@manosenaccion.org';
+  const editorPassword =
+    process.env.SEED_EDITOR_PASSWORD ?? 'EditorPassword123';
 
   beforeEach(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({

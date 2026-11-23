@@ -1,16 +1,18 @@
 import { Injectable } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
 import {
   AuthenticationRegistry,
   JwtBearerProvider,
   type JwtClaims,
 } from '@nestjs/authentication';
-import { UsersRepository } from '../users/users.repository.js';
-import type { User } from '../users/user.js';
+import { Repository } from 'typeorm';
+import { User } from '../users/entities/user.entity.js';
 
 @Injectable()
 export class JwtAuthProvider extends JwtBearerProvider<User> {
   constructor(
-    private readonly usersRepository: UsersRepository,
+    @InjectRepository(User)
+    private readonly users: Repository<User>,
     registry: AuthenticationRegistry,
   ) {
     super({ realm: 'manos-en-accion' });
@@ -18,6 +20,6 @@ export class JwtAuthProvider extends JwtBearerProvider<User> {
   }
 
   protected validate({ sub }: JwtClaims): Promise<User | null> {
-    return sub ? this.usersRepository.findById(sub) : Promise.resolve(null);
+    return sub ? this.users.findOneBy({ id: sub }) : Promise.resolve(null);
   }
 }

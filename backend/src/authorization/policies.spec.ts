@@ -1,13 +1,12 @@
 import { AdminPolicy } from './admin.policy.js';
 import { ContentPolicy } from './content.policy.js';
-import type { User } from '../users/user.js';
+import type { User } from '../users/entities/user.entity.js';
 
 const admin: User = {
   id: 'admin-id',
   email: 'admin@manosenaccion.org',
   name: 'Admin',
   role: 'admin',
-  createdAt: new Date(),
 };
 
 const editor: User = {
@@ -15,7 +14,6 @@ const editor: User = {
   email: 'editor@manosenaccion.org',
   name: 'Editor',
   role: 'editor',
-  createdAt: new Date(),
 };
 
 describe('ContentPolicy', () => {
@@ -39,6 +37,24 @@ describe('AdminPolicy', () => {
     expect(policy.manageDonationCredentials(admin)).toBe(true);
     expect(policy.manageContactEmails(admin)).toBe(true);
     expect(policy.manageSiteSettings(admin)).toBe(true);
+  });
+
+  it('allows an admin to manage a different editor', () => {
+    expect(policy.manageEditor(admin, editor)).toBe(true);
+  });
+
+  it('denies managing admins, self, editors and guests', () => {
+    const otherAdmin: User = {
+      id: 'other-admin-id',
+      email: 'other-admin@manosenaccion.org',
+      name: 'Other Admin',
+      role: 'admin',
+    };
+
+    expect(policy.manageEditor(admin, otherAdmin)).toBe(false);
+    expect(policy.manageEditor(admin, admin)).toBe(false);
+    expect(policy.manageEditor(editor, admin)).toBe(false);
+    expect(policy.manageEditor(null, editor)).toBe(false);
   });
 
   it('denies editors and guests', () => {

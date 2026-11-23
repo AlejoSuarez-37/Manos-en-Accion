@@ -1,6 +1,13 @@
 import { Body, Controller, Get, HttpCode, Patch, Post } from '@nestjs/common';
 import { CurrentUser, Public, TokenService } from '@nestjs/authentication';
 import { Can } from '@nestjs/authorization';
+import {
+  ApiChangePassword,
+  ApiLogin,
+  ApiLogout,
+  ApiMe,
+  ApiRefresh,
+} from './decorators/auth-swagger.decorator.js';
 import { AuthService } from './auth.service.js';
 import {
   changePasswordSchema,
@@ -9,8 +16,8 @@ import {
   type ChangePasswordDto,
   type LoginDto,
   type RefreshDto,
-} from './auth.schemas.js';
-import type { User } from '../users/user.js';
+} from '../schemas/auth.schemas.js';
+import type { User } from '../users/entities/user.entity.js';
 
 @Controller('auth')
 export class AuthController {
@@ -22,6 +29,7 @@ export class AuthController {
   @Public()
   @Post('login')
   @HttpCode(200)
+  @ApiLogin()
   login(@Body({ schema: loginSchema }) body: LoginDto) {
     return this.authService.login(body.email, body.password);
   }
@@ -29,6 +37,7 @@ export class AuthController {
   @Public()
   @Post('refresh')
   @HttpCode(200)
+  @ApiRefresh()
   refresh(@Body({ schema: refreshSchema }) body: RefreshDto) {
     return this.tokenService.refresh(body.refreshToken);
   }
@@ -36,11 +45,13 @@ export class AuthController {
   @Public()
   @Post('logout')
   @HttpCode(204)
+  @ApiLogout()
   async logout(@Body({ schema: refreshSchema }) body: RefreshDto): Promise<void> {
     await this.tokenService.revoke(body.refreshToken);
   }
 
   @Get('me')
+  @ApiMe()
   @Can.Anyone()
   me(@CurrentUser() user: User) {
     return user;
@@ -48,6 +59,7 @@ export class AuthController {
 
   @Patch('me/password')
   @HttpCode(200)
+  @ApiChangePassword()
   @Can.Anyone()
   async changePassword(
     @CurrentUser('id') userId: string,
