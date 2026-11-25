@@ -4,12 +4,13 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { PasswordHasher, TokenService } from '@nestjs/authentication';
+import { PasswordHasher, SessionService } from '@nestjs/authentication';
 import { AuthorizationService } from '@nestjs/authorization';
 import { QueryFailedError, Repository } from 'typeorm';
 import { AdminPolicy } from '../authorization/admin.policy.js';
-import { User, normalizeEmail } from './entities/user.entity.js';
+import { User, normalizeEmail, toPublicUser } from './entities/user.entity.js';
 import type { CreateUserDto, UpdateUserDto } from '../schemas/users.schemas.js';
+import { randomBytes } from 'crypto';
 
 @Injectable()
 export class UsersService {
@@ -17,9 +18,9 @@ export class UsersService {
     @InjectRepository(User)
     private readonly users: Repository<User>,
     private readonly passwordHasher: PasswordHasher,
-    private readonly tokenService: TokenService,
+    private readonly sessions: SessionService,
     private readonly authorizationService: AuthorizationService,
-  ) {}
+  ) { }
 
   async findAll(): Promise<User[]> {
     const users = await this.users.find();
@@ -76,7 +77,7 @@ export class UsersService {
 
     const saved = await this.save(user);
     if (input.password !== undefined) {
-      await this.tokenService.revokeAll(saved.id);
+      await this.sessions.revokeAll(saved.id);
     }
     return toPublicUser(saved);
   }
@@ -92,7 +93,24 @@ export class UsersService {
 
     const userId = user.id;
     await this.users.remove(user);
-    await this.tokenService.revokeAll(userId);
+    await this.sessions.revokeAll(userId);
+  }
+
+  async resetPassword(currentUser: User, id: string): Promise<string> {
+    const user = await this.findOne(id);
+    await this.authorizationService.authorize(
+      AdminPolicy,
+      'manageEditor',
+      currentUser,
+      user,
+    );
+
+    const temporaryPassword = randomBytes(18).toString('base64url');
+    await this.users.update(id, {
+      passwordHash: await this.passwordHasher.hash(temporaryPassword),
+    });
+    await this.sessions.revokeAll(id);
+    return temporaryPassword;
   }
 
   private async save(user: User): Promise<User> {
@@ -106,13 +124,6 @@ export class UsersService {
     }
   }
 }
-
-const toPublicUser = (user: User): User => ({
-  id: user.id,
-  email: user.email,
-  name: user.name,
-  role: user.role,
-});
 
 const isUniqueViolation = (error: unknown): boolean =>
   error instanceof QueryFailedError &&
