@@ -16,6 +16,7 @@ import {
   ApiFindAllUsers,
   ApiFindOneUser,
   ApiUpdateUser,
+  ApiResetUserPassword,
 } from './decorators/users-swagger.decorator.js';
 import { AdminPolicy } from '../authorization/admin.policy.js';
 import type { User } from './entities/user.entity.js';
@@ -30,7 +31,7 @@ import {
 
 @Controller('users')
 export class UsersController {
-  constructor(private readonly usersService: UsersService) {}
+  constructor(private readonly usersService: UsersService) { }
 
   @Get()
   @ApiFindAllUsers()
@@ -63,6 +64,21 @@ export class UsersController {
     @Body({ schema: updateUserSchema }) input: UpdateUserDto,
   ) {
     return this.usersService.update(currentUser, id, input);
+  }
+
+  @Post(':id/password/reset')
+  @HttpCode(200)
+  @ApiResetUserPassword()
+  @Can(AdminPolicy, 'manageEditors')
+  async resetPassword(
+    @CurrentUser() currentUser: User,
+    @Param('id', { schema: userIdParamSchema }) id: string,
+  ): Promise<{ temporaryPassword: string }> {
+    const temporaryPassword = await this.usersService.resetPassword(
+      currentUser,
+      id,
+    );
+    return { temporaryPassword };
   }
 
   @Delete(':id')

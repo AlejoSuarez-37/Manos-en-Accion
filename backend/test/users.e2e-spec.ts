@@ -39,26 +39,25 @@ describe('Users (e2e)', () => {
   const login = (email: string, password: string) =>
     request(server).post('/auth/login').send({ email, password });
 
-  const bearer = (token: string) => `Bearer ${token}`;
-
-  const getToken = async (email: string, password: string): Promise<string> => {
-    const response = await login(email, password).expect(200);
-    return response.body.accessToken;
+  const signIn = async (email: string, password: string) => {
+    const agent = request.agent(server);
+    const response = await agent
+      .post('/auth/login')
+      .send({ email, password })
+      .expect(200);
+    return { agent, response };
   };
 
   const createEditor = (
-    token: string,
+    agent: ReturnType<typeof request.agent>,
     overrides: Record<string, unknown> = {},
   ) =>
-    request(server)
-      .post('/users')
-      .set('Authorization', bearer(token))
-      .send({
-        name: 'New Editor',
-        email: newEditorEmail,
-        password: newEditorPassword,
-        ...overrides,
-      });
+    agent.post('/users').send({
+      name: 'New Editor',
+      email: newEditorEmail,
+      password: newEditorPassword,
+      ...overrides,
+    });
 
   it('requires authentication and denies editors on every users route', async () => {
     const body = {
@@ -70,36 +69,22 @@ describe('Users (e2e)', () => {
     await request(server).get('/users').expect(401);
     await request(server).post('/users').send(body).expect(401);
 
-    const token = await getToken(editorEmail, editorPassword);
+    const { agent } = await signIn(editorEmail, editorPassword);
 
-    await request(server)
-      .get('/users')
-      .set('Authorization', bearer(token))
-      .expect(403);
-    await request(server)
-      .get(`/users/${unknownId}`)
-      .set('Authorization', bearer(token))
-      .expect(403);
-    await request(server)
-      .post('/users')
-      .set('Authorization', bearer(token))
-      .send(body)
-      .expect(403);
-    await request(server)
+    await agent.get('/users').expect(403);
+    await agent.get(`/users/${unknownId}`).expect(403);
+    await agent.post('/users').send(body).expect(403);
+    await agent
       .patch(`/users/${unknownId}`)
-      .set('Authorization', bearer(token))
       .send({ name: 'Hacked' })
       .expect(403);
-    await request(server)
-      .delete(`/users/${unknownId}`)
-      .set('Authorization', bearer(token))
-      .expect(403);
+    await agent.delete(`/users/${unknownId}`).expect(403);
   });
 
   it('creates editors without exposing the password hash and allows them to sign in', async () => {
-    const token = await getToken(adminEmail, adminPassword);
+    const { agent } = await signIn(adminEmail, adminPassword);
 
-    const response = await createEditor(token, {
+    const response = await createEditor(agent, {
       name: '  Grace Hopper  ',
       email: ' GRACE@example.COM ',
       role: 'editor',
@@ -116,25 +101,22 @@ describe('Users (e2e)', () => {
   });
 
   it('rejects admin roles and duplicate emails', async () => {
-    const token = await getToken(adminEmail, adminPassword);
+    const { agent } = await signIn(adminEmail, adminPassword);
 
-    await createEditor(token, {
+    await createEditor(agent, {
       email: 'second.editor@example.com',
       role: 'admin',
     }).expect(400);
 
-    await createEditor(token, {
+    await createEditor(agent, {
       email: `  ${adminEmail.toUpperCase()}  `,
     }).expect(409);
   });
 
   it('lists and reads users without password hashes', async () => {
-    const token = await getToken(adminEmail, adminPassword);
+    const { agent } = await signIn(adminEmail, adminPassword);
 
-    const list = await request(server)
-      .get('/users')
-      .set('Authorization', bearer(token))
-      .expect(200);
+    const list = await agent.get('/users').expect(200);
 
     expect(list.body).toEqual(
       expect.arrayContaining([
@@ -149,34 +131,25 @@ describe('Users (e2e)', () => {
     const editor = list.body.find(
       (user: { email: string }) => user.email === editorEmail,
     );
-    const detail = await request(server)
-      .get(`/users/${editor.id}`)
-      .set('Authorization', bearer(token))
-      .expect(200);
+    const detail = await agent.get(`/users/${editor.id}`).expect(200);
 
     expect(detail.body).toMatchObject({ id: editor.id, email: editorEmail });
     expect(detail.body).not.toHaveProperty('passwordHash');
 
-    await request(server)
-      .get('/users/not-a-uuid')
-      .set('Authorization', bearer(token))
-      .expect(400);
-    await request(server)
-      .get(`/users/${unknownId}`)
-      .set('Authorization', bearer(token))
-      .expect(404);
+    await agent.get('/users/not-a-uuid').expect(400);
+    await agent.get(`/users/${unknownId}`).expect(404);
   });
 
-  it('updates an editor, resets its password and revokes refresh tokens', async () => {
-    const token = await getToken(adminEmail, adminPassword);
-    const created = await createEditor(token).expect(201);
-    const editorLogin = await login(newEditorEmail, newEditorPassword).expect(
-      200,
+  it('updates an editor, resets its password and closes its sessions', async () => {
+    const { agent } = await signIn(adminEmail, adminPassword);
+    const created = await createEditor(agent).expect(201);
+    const { agent: editorAgent } = await signIn(
+      newEditorEmail,
+      newEditorPassword,
     );
 
-    const updated = await request(server)
+    const updated = await agent
       .patch(`/users/${created.body.id}`)
-      .set('Authorization', bearer(token))
       .send({
         name: 'Grace Hopper',
         email: ' grace.hopper@example.com ',
@@ -192,84 +165,77 @@ describe('Users (e2e)', () => {
     });
     expect(updated.body).not.toHaveProperty('passwordHash');
 
+    await editorAgent.get('/auth/me').expect(401);
     await login(newEditorEmail, newEditorPassword).expect(401);
-    await login('grace.hopper@example.com', 'NewGracePassword456').expect(200);
-    await request(server)
-      .post('/auth/refresh')
-      .send({ refreshToken: editorLogin.body.refreshToken })
-      .expect(401);
+    await signIn('grace.hopper@example.com', 'NewGracePassword456');
   });
 
   it('rejects empty updates, admin roles and duplicate emails on update', async () => {
-    const token = await getToken(adminEmail, adminPassword);
-    const created = await createEditor(token).expect(201);
+    const { agent } = await signIn(adminEmail, adminPassword);
+    const created = await createEditor(agent).expect(201);
 
-    await request(server)
-      .patch(`/users/${created.body.id}`)
-      .set('Authorization', bearer(token))
-      .send({})
-      .expect(400);
+    await agent.patch(`/users/${created.body.id}`).send({}).expect(400);
 
-    await request(server)
+    await agent
       .patch(`/users/${created.body.id}`)
-      .set('Authorization', bearer(token))
       .send({ role: 'admin' })
       .expect(400);
 
-    await request(server)
+    await agent
       .patch(`/users/${created.body.id}`)
-      .set('Authorization', bearer(token))
       .send({ email: adminEmail })
       .expect(409);
   });
 
   it('refuses to edit or delete admins', async () => {
-    const token = await getToken(adminEmail, adminPassword);
-    const list = await request(server)
-      .get('/users')
-      .set('Authorization', bearer(token))
-      .expect(200);
+    const { agent } = await signIn(adminEmail, adminPassword);
+    const list = await agent.get('/users').expect(200);
     const adminUser = list.body.find(
       (user: { role: string }) => user.role === 'admin',
     );
 
-    await request(server)
+    await agent
       .patch(`/users/${adminUser.id}`)
-      .set('Authorization', bearer(token))
       .send({ name: 'Hacked' })
       .expect(403);
 
-    await request(server)
-      .delete(`/users/${adminUser.id}`)
-      .set('Authorization', bearer(token))
-      .expect(403);
+    await agent.delete(`/users/${adminUser.id}`).expect(403);
   });
 
   it('deletes an editor and invalidates its credentials', async () => {
-    const token = await getToken(adminEmail, adminPassword);
-    const created = await createEditor(token).expect(201);
-    const editorLogin = await login(newEditorEmail, newEditorPassword).expect(
-      200,
+    const { agent } = await signIn(adminEmail, adminPassword);
+    const created = await createEditor(agent).expect(201);
+    const { agent: editorAgent } = await signIn(
+      newEditorEmail,
+      newEditorPassword,
     );
 
-    await request(server)
-      .delete(`/users/${created.body.id}`)
-      .set('Authorization', bearer(token))
-      .expect(204);
+    await agent.delete(`/users/${created.body.id}`).expect(204);
 
-    await request(server)
-      .get('/auth/me')
-      .set('Authorization', bearer(editorLogin.body.accessToken))
-      .expect(401);
+    await editorAgent.get('/auth/me').expect(401);
     await login(newEditorEmail, newEditorPassword).expect(401);
-    await request(server)
-      .post('/auth/refresh')
-      .send({ refreshToken: editorLogin.body.refreshToken })
-      .expect(401);
+    await agent.delete(`/users/${created.body.id}`).expect(404);
+  });
 
-    await request(server)
-      .delete(`/users/${created.body.id}`)
-      .set('Authorization', bearer(token))
-      .expect(404);
+  it('resets a password with a temporary one and closes the editor sessions', async () => {
+    const { agent } = await signIn(adminEmail, adminPassword);
+    const created = await createEditor(agent).expect(201);
+    const { agent: editorAgent } = await signIn(
+      newEditorEmail,
+      newEditorPassword,
+    );
+
+    const response = await agent
+      .post(`/users/${created.body.id}/password/reset`)
+      .expect(200);
+
+    expect(response.body.temporaryPassword).toEqual(expect.any(String));
+    expect(response.body.temporaryPassword).toHaveLength(24);
+    await editorAgent.get('/auth/me').expect(401);
+    await login(newEditorEmail, newEditorPassword).expect(401);
+    await login(
+      newEditorEmail,
+      response.body.temporaryPassword as string,
+    ).expect(200);
   });
 });

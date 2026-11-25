@@ -3,7 +3,7 @@ import {
   ForbiddenException,
   NotFoundException,
 } from '@nestjs/common';
-import { PasswordHasher, TokenService } from '@nestjs/authentication';
+import { PasswordHasher, SessionService } from '@nestjs/authentication';
 import { AuthorizationService } from '@nestjs/authorization';
 import { QueryFailedError, type Repository } from 'typeorm';
 import { AdminPolicy } from '../authorization/admin.policy.js';
@@ -31,19 +31,20 @@ const createService = () => {
     create: vi.fn(),
     save: vi.fn(),
     remove: vi.fn(),
+    update: vi.fn(),
   };
   const passwordHasher = { hash: vi.fn() };
-  const tokenService = { revokeAll: vi.fn() };
+  const sessions = { revokeAll: vi.fn() };
   const authorizationService = { authorize: vi.fn() };
 
   const service = new UsersService(
     users as unknown as Repository<User>,
     passwordHasher as unknown as PasswordHasher,
-    tokenService as unknown as TokenService,
+    sessions as unknown as SessionService,
     authorizationService as unknown as AuthorizationService,
   );
 
-  return { service, users, passwordHasher, tokenService, authorizationService };
+  return { service, users, passwordHasher, sessions, authorizationService };
 };
 
 beforeEach(() => {
@@ -143,7 +144,7 @@ describe('UsersService', () => {
       users,
       passwordHasher,
       authorizationService,
-      tokenService,
+      sessions,
     } = createService();
     const target: User = {
       id: editor.id,
@@ -176,11 +177,11 @@ describe('UsersService', () => {
         passwordHash: 'new-hashed-password',
       }),
     );
-    expect(tokenService.revokeAll).toHaveBeenCalledWith(target.id);
+    expect(sessions.revokeAll).toHaveBeenCalledWith(target.id);
   });
 
   it('does not update when authorization fails', async () => {
-    const { service, users, authorizationService, tokenService } =
+    const { service, users, authorizationService, sessions } =
       createService();
     users.findOneBy.mockResolvedValue(editor);
     authorizationService.authorize.mockRejectedValue(new ForbiddenException());
@@ -189,11 +190,11 @@ describe('UsersService', () => {
       service.update(admin, editor.id, { name: 'Hacked' }),
     ).rejects.toBeInstanceOf(ForbiddenException);
     expect(users.save).not.toHaveBeenCalled();
-    expect(tokenService.revokeAll).not.toHaveBeenCalled();
+    expect(sessions.revokeAll).not.toHaveBeenCalled();
   });
 
   it('does not revoke tokens when only the name changes', async () => {
-    const { service, users, authorizationService, tokenService } =
+    const { service, users, authorizationService, sessions } =
       createService();
     const target: User = {
       id: editor.id,
@@ -207,11 +208,11 @@ describe('UsersService', () => {
 
     await service.update(admin, target.id, { name: 'Renamed' });
 
-    expect(tokenService.revokeAll).not.toHaveBeenCalled();
+    expect(sessions.revokeAll).not.toHaveBeenCalled();
   });
 
   it('authorizes before deleting and revokes tokens', async () => {
-    const { service, users, authorizationService, tokenService } =
+    const { service, users, authorizationService, sessions } =
       createService();
     users.findOneBy.mockResolvedValue(editor);
     authorizationService.authorize.mockResolvedValue(undefined);
@@ -226,6 +227,29 @@ describe('UsersService', () => {
       editor,
     );
     expect(users.remove).toHaveBeenCalledWith(editor);
-    expect(tokenService.revokeAll).toHaveBeenCalledWith(editor.id);
+    expect(sessions.revokeAll).toHaveBeenCalledWith(editor.id);
+  });
+
+  it('generates a temporary password, authorizes and revokes all sessions', async () => {
+    const { service, users, passwordHasher, authorizationService, sessions } =
+      createService();
+    users.findOneBy.mockResolvedValue(editor);
+    authorizationService.authorize.mockResolvedValue(undefined);
+    passwordHasher.hash.mockResolvedValue('temporary-hash');
+    users.update.mockResolvedValue(undefined);
+
+    const temporaryPassword = await service.resetPassword(admin, editor.id);
+
+    expect(temporaryPassword).toMatch(/^[A-Za-z0-9_-]{24}$/);
+    expect(authorizationService.authorize).toHaveBeenCalledWith(
+      AdminPolicy,
+      'manageEditor',
+      admin,
+      editor,
+    );
+    expect(users.update).toHaveBeenCalledWith(editor.id, {
+      passwordHash: 'temporary-hash',
+    });
+    expect(sessions.revokeAll).toHaveBeenCalledWith(editor.id);
   });
 });

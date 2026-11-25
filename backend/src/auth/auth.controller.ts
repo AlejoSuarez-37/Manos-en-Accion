@@ -1,21 +1,27 @@
-import { Body, Controller, Get, HttpCode, Patch, Post } from '@nestjs/common';
-import { CurrentUser, Public, TokenService } from '@nestjs/authentication';
+import {
+  Body,
+  Controller,
+  Get,
+  HttpCode,
+  Patch,
+  Post,
+  UseGuards,
+} from '@nestjs/common';
+import { CurrentUser, Public, SignInService } from '@nestjs/authentication';
+import { ThrottlerGuard } from '@nestjs/throttler';
 import { Can } from '@nestjs/authorization';
 import {
   ApiChangePassword,
   ApiLogin,
   ApiLogout,
   ApiMe,
-  ApiRefresh,
 } from './decorators/auth-swagger.decorator.js';
 import { AuthService } from './auth.service.js';
 import {
   changePasswordSchema,
   loginSchema,
-  refreshSchema,
   type ChangePasswordDto,
   type LoginDto,
-  type RefreshDto,
 } from '../schemas/auth.schemas.js';
 import type { User } from '../users/entities/user.entity.js';
 
@@ -23,10 +29,11 @@ import type { User } from '../users/entities/user.entity.js';
 export class AuthController {
   constructor(
     private readonly authService: AuthService,
-    private readonly tokenService: TokenService,
-  ) {}
+    private readonly signInService: SignInService,
+  ) { }
 
   @Public()
+  @UseGuards(ThrottlerGuard)
   @Post('login')
   @HttpCode(200)
   @ApiLogin()
@@ -34,20 +41,12 @@ export class AuthController {
     return this.authService.login(body.email, body.password);
   }
 
-  @Public()
-  @Post('refresh')
-  @HttpCode(200)
-  @ApiRefresh()
-  refresh(@Body({ schema: refreshSchema }) body: RefreshDto) {
-    return this.tokenService.refresh(body.refreshToken);
-  }
-
-  @Public()
   @Post('logout')
   @HttpCode(204)
   @ApiLogout()
-  async logout(@Body({ schema: refreshSchema }) body: RefreshDto): Promise<void> {
-    await this.tokenService.revoke(body.refreshToken);
+  @Can.Anyone()
+  async logout(): Promise<void> {
+    await this.signInService.signOut();
   }
 
   @Get('me')
@@ -65,7 +64,11 @@ export class AuthController {
     @CurrentUser('id') userId: string,
     @Body({ schema: changePasswordSchema }) body: ChangePasswordDto,
   ): Promise<{ message: string }> {
-    await this.authService.changePassword(userId, body.currentPassword, body.newPassword);
+    await this.authService.changePassword(
+      userId,
+      body.currentPassword,
+      body.newPassword,
+    );
     return { message: 'Password updated' };
   }
 }

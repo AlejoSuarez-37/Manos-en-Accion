@@ -9,12 +9,8 @@ export const envSchema = z
       .default('development'),
     PORT: z.coerce.number().int().positive().default(3000),
     CORS_ORIGIN: z.string().min(1),
-    JWT_SECRET: z.string().min(32),
-    JWT_ISSUER: z.string().min(1),
-    JWT_AUDIENCE: z.string().min(1),
-    ACCESS_TOKEN_TTL: durationSchema.default('15m'),
-    REFRESH_TOKEN_TTL: durationSchema.default('7d'),
-    REFRESH_TOKEN_ABSOLUTE_TTL: durationSchema.default('30d'),
+    SESSION_IDLE_TTL: durationSchema.default('1d'),
+    SESSION_ABSOLUTE_TTL: durationSchema.default('7d'),
     DATABASE_URL: z.url().optional(),
     TEST_DATABASE_URL: z.url().optional(),
     SEED_ADMIN_EMAIL: z.email(),
@@ -43,6 +39,16 @@ export const envSchema = z
         code: 'custom',
         message:
           'SEED_EDITOR_EMAIL and SEED_EDITOR_PASSWORD must be set together',
+      });
+    }
+
+    if (
+      env.NODE_ENV === 'production' &&
+      /change[-_]?me|changethis|placeholder/i.test(env.SEED_ADMIN_PASSWORD)
+    ) {
+      context.addIssue({
+        code: 'custom',
+        message: 'SEED_ADMIN_PASSWORD must not be a placeholder in production',
       });
     }
   });
