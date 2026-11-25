@@ -64,7 +64,7 @@ export function ApiUpdateUser() {
     ApiOperation({
       summary: 'Actualizar usuario',
       description:
-        'Actualiza los campos enviados de un usuario. No se puede modificar un administrador; si se cambia la contraseña se revocan sus tokens.',
+        'Actualiza los campos enviados de un usuario. No se puede modificar un administrador; si se cambia la contraseña se cierran todas sus sesiones.',
     }),
     ApiResponse({
       status: 200,
@@ -89,7 +89,7 @@ export function ApiDeleteUser() {
     ApiOperation({
       summary: 'Eliminar usuario',
       description:
-        'Elimina un usuario y revoca todos sus tokens. No se puede eliminar un administrador.',
+        'Elimina un usuario y cierra todas sus sesiones. No se puede eliminar un administrador.',
     }),
     ApiResponse({
       status: 204,
@@ -100,6 +100,27 @@ export function ApiDeleteUser() {
     ApiResponse({
       status: 403,
       description: 'Sin permisos para eliminar usuarios',
+    }),
+    ApiResponse({ status: 404, description: 'Usuario no encontrado' }),
+  );
+}
+
+export function ApiResetUserPassword() {
+  return applyDecorators(
+    ApiOperation({
+      summary: 'Restablecer contraseña',
+      description:
+        'Genera una contraseña temporal, cierra todas las sesiones del usuario y la devuelve una única vez.',
+    }),
+    ApiResponse({
+      status: 200,
+      description: 'Contraseña temporal generada correctamente',
+    }),
+    ApiResponse({ status: 400, description: 'ID inválido' }),
+    ApiResponse({ status: 401, description: 'No autenticado' }),
+    ApiResponse({
+      status: 403,
+      description: 'Sin permisos para restablecer contraseñas',
     }),
     ApiResponse({ status: 404, description: 'Usuario no encontrado' }),
   );
