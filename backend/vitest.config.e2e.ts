@@ -18,14 +18,8 @@ export default defineConfig({
       TEST_DATABASE_URL:
         process.env.TEST_DATABASE_URL ??
         'postgresql://postgres:postgres@localhost:5432/manos_en_accion_test',
-      JWT_SECRET:
-        process.env.JWT_SECRET ?? 'test-only-jwt-secret-of-at-least-32-bytes',
-      JWT_ISSUER: process.env.JWT_ISSUER ?? 'manos-en-accion-api',
-      JWT_AUDIENCE: process.env.JWT_AUDIENCE ?? 'manos-en-accion-admin',
-      ACCESS_TOKEN_TTL: process.env.ACCESS_TOKEN_TTL ?? '15m',
-      REFRESH_TOKEN_TTL: process.env.REFRESH_TOKEN_TTL ?? '7d',
-      REFRESH_TOKEN_ABSOLUTE_TTL:
-        process.env.REFRESH_TOKEN_ABSOLUTE_TTL ?? '30d',
+      SESSION_IDLE_TTL: process.env.SESSION_IDLE_TTL ?? '1d',
+      SESSION_ABSOLUTE_TTL: process.env.SESSION_ABSOLUTE_TTL ?? '7d',
       SEED_ADMIN_EMAIL:
         process.env.SEED_ADMIN_EMAIL ?? 'admin@manosenaccion.org',
       SEED_ADMIN_PASSWORD:

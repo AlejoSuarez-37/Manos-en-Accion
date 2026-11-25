@@ -31,6 +31,9 @@ describe('Authentication (e2e)', () => {
   let app: INestApplication<App>;
   let server: App;
 
+  const origins = (process.env.CORS_ORIGIN ?? 'http://localhost:3000')
+    .split(',')
+    .map((origin) => origin.trim());
   const adminEmail = process.env.SEED_ADMIN_EMAIL ?? 'admin@manosenaccion.org';
   const adminPassword = process.env.SEED_ADMIN_PASSWORD ?? 'AdminPassword123';
   const editorEmail =
@@ -48,6 +51,8 @@ describe('Authentication (e2e)', () => {
       .compile();
 
     app = moduleFixture.createNestApplication();
+    app.enableCors({ origin: origins, credentials: true });
+    app.enableCsrfProtection({ trustedOrigins: origins });
     await app.init();
     server = app.getHttpServer();
   });
@@ -59,7 +64,14 @@ describe('Authentication (e2e)', () => {
   const login = (email: string, password: string) =>
     request(server).post('/auth/login').send({ email, password });
 
-  const bearer = (token: string) => `Bearer ${token}`;
+  const signIn = async (email: string, password: string) => {
+    const agent = request.agent(server);
+    const response = await agent
+      .post('/auth/login')
+      .send({ email, password })
+      .expect(200);
+    return { agent, response };
+  };
 
   it('serves the public route without credentials', async () => {
     await request(server).get('/').expect(200).expect('Hello World!');
@@ -70,94 +82,65 @@ describe('Authentication (e2e)', () => {
     await login('unknown@manosenaccion.org', adminPassword).expect(401);
   });
 
-  it('signs in and returns the current user', async () => {
-    const { body } = await login(adminEmail, adminPassword).expect(200);
+  it('sets an HttpOnly session cookie and returns the current user', async () => {
+    const { agent, response } = await signIn(adminEmail, adminPassword);
 
-    expect(body.accessToken).toEqual(expect.any(String));
-    expect(body.refreshToken).toEqual(expect.any(String));
-    expect(body.expiresIn).toEqual(expect.any(Number));
+    expect(response.body).toMatchObject({ email: adminEmail, role: 'admin' });
+    expect(response.body).not.toHaveProperty('passwordHash');
+    expect(response.body).not.toHaveProperty('accessToken');
+    expect(response.body).not.toHaveProperty('refreshToken');
 
-    const me = await request(server)
-      .get('/auth/me')
-      .set('Authorization', bearer(body.accessToken))
-      .expect(200);
+    const cookie = String(response.headers['set-cookie']?.[0] ?? '');
+    expect(cookie).toContain('sid=');
+    expect(cookie).toContain('HttpOnly');
 
-    expect(me.body).toMatchObject({
-      email: adminEmail,
-      role: 'admin',
-    });
-    expect(me.body).not.toHaveProperty('passwordHash');
+    const me = await agent.get('/auth/me').expect(200);
+    expect(me.body).toMatchObject({ email: adminEmail, role: 'admin' });
   });
 
-  it('requires a token and denies editors on admin routes', async () => {
+  it('requires a session and denies editors on admin routes', async () => {
     await request(server).get('/test/admin').expect(401);
 
-    const editorLogin = await login(editorEmail, editorPassword).expect(200);
-
-    await request(server)
-      .get('/test/admin')
-      .set('Authorization', bearer(editorLogin.body.accessToken))
-      .expect(403);
-
-    await request(server)
-      .get('/test/content')
-      .set('Authorization', bearer(editorLogin.body.accessToken))
-      .expect(200);
+    const { agent } = await signIn(editorEmail, editorPassword);
+    await agent.get('/test/admin').expect(403);
+    await agent.get('/test/content').expect(200);
   });
 
   it('allows admins on content and admin routes', async () => {
-    const adminLogin = await login(adminEmail, adminPassword).expect(200);
-
-    await request(server)
-      .get('/test/admin')
-      .set('Authorization', bearer(adminLogin.body.accessToken))
-      .expect(200);
-
-    await request(server)
-      .get('/test/content')
-      .set('Authorization', bearer(adminLogin.body.accessToken))
-      .expect(200);
+    const { agent } = await signIn(adminEmail, adminPassword);
+    await agent.get('/test/admin').expect(200);
+    await agent.get('/test/content').expect(200);
   });
 
-  it('rotates refresh tokens and revokes the family on reuse', async () => {
-    const { body } = await login(adminEmail, adminPassword).expect(200);
+  it('signs out and invalidates the session cookie', async () => {
+    const { agent } = await signIn(editorEmail, editorPassword);
+    await agent.get('/auth/me').expect(200);
 
-    const rotated = await request(server)
-      .post('/auth/refresh')
-      .send({ refreshToken: body.refreshToken })
-      .expect(200);
-
-    await request(server)
-      .post('/auth/refresh')
-      .send({ refreshToken: body.refreshToken })
-      .expect(401);
-
-    await request(server)
-      .post('/auth/refresh')
-      .send({ refreshToken: rotated.body.refreshToken })
-      .expect(401);
+    await agent.post('/auth/logout').expect(204);
+    await agent.get('/auth/me').expect(401);
   });
 
-  it('revokes a refresh token on logout', async () => {
-    const { body } = await login(editorEmail, editorPassword).expect(200);
-
-    await request(server).post('/auth/logout').send({ refreshToken: body.refreshToken }).expect(204);
-
-    await request(server).post('/auth/refresh').send({ refreshToken: body.refreshToken }).expect(401);
+  it('refuses a sign-in from another origin', async () => {
+    await request(server)
+      .post('/auth/login')
+      .set('Origin', 'https://evil.example')
+      .send({ email: adminEmail, password: adminPassword })
+      .expect(403);
   });
 
-  it('changes the password and invalidates old credentials and refresh tokens', async () => {
+  it('changes the password, keeps the current session and closes the others', async () => {
     const newPassword = 'NewEditorPassword456';
-    const { body } = await login(editorEmail, editorPassword).expect(200);
+    const { agent } = await signIn(editorEmail, editorPassword);
+    const other = await signIn(editorEmail, editorPassword);
 
-    await request(server)
+    await agent
       .patch('/auth/me/password')
-      .set('Authorization', bearer(body.accessToken))
       .send({ currentPassword: editorPassword, newPassword })
       .expect(200);
 
+    await agent.get('/auth/me').expect(200);
+    await other.agent.get('/auth/me').expect(401);
     await login(editorEmail, editorPassword).expect(401);
-    await login(editorEmail, newPassword).expect(200);
-    await request(server).post('/auth/refresh').send({ refreshToken: body.refreshToken }).expect(401);
+    await signIn(editorEmail, newPassword);
   });
 });
