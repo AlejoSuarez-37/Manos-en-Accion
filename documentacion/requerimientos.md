@@ -1,8 +1,8 @@
 > **Proyecto:** Manos en Accion
 
-> **Versión del documento:** 1.0
+> **Versión del documento:** 1.2
 
-> **Fecha:** 2026-11-16
+> **Fecha:** 2026-11-25
 
 > **Autor(es):** Alejo Suarez / Matias Fernandez / Agustin Begue
 
@@ -24,6 +24,7 @@
 |---------|------------|----------------|---------------------------------|
 | 1.0     | 2026-11-16 | [Alejo Suarez] | Versión inicial del documento   |
 | 1.1     | 2026-11-17 | [Alejo Suarez] | Incorporación del RF-008 al RF-015 |   
+| 1.2     | 2026-11-25 | [Alejo Suarez] | Sesiones persistentes y ajuste de credenciales |   
 
 ---
 
@@ -226,7 +227,7 @@ El sistema debe permitir a cualquier visitante público navegar por el contenido
 #### Criterios de Aceptación
 - [x] El sistema debe permitir el acceso sin restricciones de autenticación a todas las vistas públicas (Landing Page, noticias, talleres, sobre nosotros, aliados).
 - [x] El flujo de donación debe estar disponible para usuarios no autenticados, solicitando únicamente los datos indispensables para procesar el pago o registrar la contribución (ej. nombre opcional, correo electrónico para comprobante y datos de pago).
-- [x] El servidor no debe exigir token de sesión ni credenciales de usuario para procesar las solicitudes de lectura de contenidos públicos o registro de donaciones de invitados.
+- [x] El servidor no debe exigir autenticación ni credenciales de usuario para procesar las solicitudes de lectura de contenidos públicos o registro de donaciones de invitados.
 - [x] El servidor debe retornar el código HTTP 200 OK al consultar páginas públicas y 201 Created al registrar con éxito una donación realizada por un visitante.
 
 ---
@@ -250,9 +251,10 @@ El sistema debe permitir que un usuario autenticado con rol "Administrador" edit
 
 #### Criterios de Aceptación
 - [x] El sistema debe validar que solo los usuarios con rol Administrador puedan acceder a la sección de gestión de usuarios, creación de editores y configuración de credenciales de donación.
-- [x] Al crear un nuevo usuario con rol Editor, el sistema debe exigir un nombre de usuario único, un correo electrónico válido y una contraseña segura, asociándoles correctamente el rol correspondiente.
+- [x] Al crear un nuevo usuario con rol Editor, el sistema debe exigir un nombre visible, un correo electrónico válido y único y una contraseña segura, asociándoles correctamente el rol correspondiente.
 - [x] El administrador debe poder actualizar las credenciales de las pasarelas o métodos de recepción de donaciones de forma segura, reflejándose en el procesamiento de pagos de manera inmediata.
 - [x] El servidor debe retornar 201 Created al registrar un nuevo editor y 200 OK al actualizar contenidos, credenciales o la contraseña propia.
+- [x] El administrador debe poder restablecer la contraseña de un Editor; la contraseña temporal se entrega una sola vez y se revocan todas sus sesiones activas.
 
 ---
 
@@ -408,3 +410,29 @@ El sistema debe habilitar un formulario específico para postulantes a voluntari
 ---
 
 ## Requerimientos No Funcionales
+
+### RNF-001 — Autenticación y sesiones
+
+| Campo         | Detalle        |
+|---------------|----------------|
+| **ID**        | RNF-001        |
+| **Nombre**    | Autenticación y sesiones |
+| **Tipo**      | No Funcional   |
+| **Prioridad** | `Alta`         |
+| **Estado**    | `Pendiente`    |
+
+#### Descripción
+> El usuario del panel administrativo accede mediante credenciales de correo electrónico y contraseña. El servidor mantiene la sesión y envía al navegador una cookie HttpOnly, de modo que no sea necesario exponer tokens en la respuesta ni almacenarlos en el cliente.
+
+```
+El sistema debe autenticar a administradores y editores con sesiones persistentes en el servidor, representadas por una cookie HttpOnly, Secure en producción y SameSite Lax. Las sesiones deben expirar por inactividad y por duración total máxima, configurable mediante variables de entorno, y deben revocarse al cerrar sesión, al cambiar la contraseña propia, al restablecer una contraseña desde administración, al modificar la clave de un usuario o al darlo de baja. El acceso público y el flujo de donaciones de visitantes no deben requerir sesión.
+```
+
+#### Criterios de Aceptación
+- [x] La autenticación debe basarse en sesiones persistentes en el servidor y una cookie HttpOnly; la respuesta de login no debe incluir tokens de acceso ni de actualización.
+- [x] La cookie debe enviarse con `Secure` en producción y con `SameSite=Lax`, y el navegador debe reenviarla automáticamente en las solicitudes al panel.
+- [x] La sesión debe dejar de ser válida al superar el tiempo de inactividad configurado (`1d` por defecto) o el tiempo total configurado (`7d` por defecto).
+- [x] El cierre de sesión, el cambio de contraseña propia, el restablecimiento por administrador, la actualización de clave y la baja de usuario deben revocar las sesiones correspondientes.
+- [x] El sistema debe limitar los intentos de inicio de sesión a 10 por dirección IP por minuto y 5 por cuenta cada 15 minutos.
+- [x] Las solicitudes autenticadas deben validar el origen de la petición y permitir credenciales solo para los orígenes configurados.
+- [x] Las solicitudes del sitio público y de donaciones de visitantes no deben exigir sesión ni credenciales.
