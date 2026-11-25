@@ -19,6 +19,8 @@ describe('Team members (e2e)', () => {
   const png = (extraBytes = 0) => Buffer.concat([PNG, Buffer.alloc(extraBytes)]);
   const unknownId = '00000000-0000-0000-0000-000000000000';
 
+  type Agent = ReturnType<typeof request.agent>;
+
   const adminEmail = process.env.SEED_ADMIN_EMAIL ?? 'admin@manosenaccion.org';
   const adminPassword = process.env.SEED_ADMIN_PASSWORD ?? 'AdminPassword123';
   const editorEmail = process.env.SEED_EDITOR_EMAIL ?? 'editor@manosenaccion.org';
@@ -57,18 +59,14 @@ describe('Team members (e2e)', () => {
     await app.close();
   });
 
-  const bearer = (token: string) => `Bearer ${token}`;
-
-  const getToken = async (email: string, password: string): Promise<string> => {
-    const response = await request(server)
-      .post('/auth/login')
-      .send({ email, password })
-      .expect(200);
-    return response.body.accessToken;
+  const signIn = async (email: string, password: string): Promise<Agent> => {
+    const agent = request.agent(server);
+    await agent.post('/auth/login').send({ email, password }).expect(200);
+    return agent;
   };
 
   const createMember = (
-    token: string,
+    agent: Agent,
     overrides: {
       name?: string;
       role?: string;
@@ -77,9 +75,7 @@ describe('Team members (e2e)', () => {
       filename?: string;
     } = {},
   ) => {
-    let req = request(server)
-      .post('/team-members')
-      .set('Authorization', bearer(token));
+    let req = agent.post('/team-members');
 
     if (overrides.name !== undefined) {
       req = req.field('name', overrides.name);
@@ -96,12 +92,12 @@ describe('Team members (e2e)', () => {
     return req;
   };
 
-  it('permite ver el equipo público sin token y crea miembros con foto', async () => {
+  it('permite ver el equipo público sin sesión y crea miembros con foto', async () => {
     const publicList = await request(server).get('/team-members').expect(200);
     expect(publicList.body).toEqual([]);
 
-    const token = await getToken(adminEmail, adminPassword);
-    const response = await createMember(token, {
+    const admin = await signIn(adminEmail, adminPassword);
+    const response = await createMember(admin, {
       name: ' Ana Pérez ',
       role: 'Coordinadora',
       bio: 'Biografía',
@@ -126,12 +122,12 @@ describe('Team members (e2e)', () => {
     expect(members.body[0]).not.toHaveProperty('imageKey');
   });
 
-  it('exige token y permite editar a administradores y editores', async () => {
+  it('exige sesión y permite editar a administradores y editores', async () => {
     await request(server).get(`/team-members/${unknownId}`).expect(401);
-    await createMember('token-invalido', { file: png() }).expect(401);
+    await createMember(request.agent(server), { file: png() }).expect(401);
 
-    const editorToken = await getToken(editorEmail, editorPassword);
-    await createMember(editorToken, {
+    const editor = await signIn(editorEmail, editorPassword);
+    await createMember(editor, {
       name: 'Editor',
       role: 'Editor',
       file: png(),
@@ -139,31 +135,25 @@ describe('Team members (e2e)', () => {
   });
 
   it('rechaza ID inválidos, miembros inexistentes y campos incompletos', async () => {
-    const token = await getToken(adminEmail, adminPassword);
+    const admin = await signIn(adminEmail, adminPassword);
 
-    await createMember(token, { name: 'Sin rol', file: png() }).expect(400);
-    await createMember(token, { name: 'Sin foto', role: 'Rol' }).expect(400);
-    await request(server)
-      .get('/team-members/not-a-uuid')
-      .set('Authorization', bearer(token))
-      .expect(400);
-    await request(server)
-      .get(`/team-members/${unknownId}`)
-      .set('Authorization', bearer(token))
-      .expect(404);
+    await createMember(admin, { name: 'Sin rol', file: png() }).expect(400);
+    await createMember(admin, { name: 'Sin foto', role: 'Rol' }).expect(400);
+    await admin.get('/team-members/not-a-uuid').expect(400);
+    await admin.get(`/team-members/${unknownId}`).expect(404);
   });
 
   it('rechaza formatos no permitidos, imágenes grandes y traduce fallos del proveedor', async () => {
-    const token = await getToken(adminEmail, adminPassword);
+    const admin = await signIn(adminEmail, adminPassword);
     const html = Buffer.from('<script>alert(1)</script>');
 
-    await createMember(token, {
+    await createMember(admin, {
       name: 'Falso',
       role: 'Rol',
       file: html,
       filename: 'foto.png',
     }).expect(415);
-    await createMember(token, {
+    await createMember(admin, {
       name: 'Grande',
       role: 'Rol',
       file: png(5 * 1024 * 1024),
@@ -171,7 +161,7 @@ describe('Team members (e2e)', () => {
     expect(uploadMock).not.toHaveBeenCalled();
 
     uploadMock.mockRejectedValueOnce(new Error('Cloudinary caído'));
-    await createMember(token, {
+    await createMember(admin, {
       name: 'Sin servicio',
       role: 'Rol',
       file: png(),
@@ -179,17 +169,16 @@ describe('Team members (e2e)', () => {
   });
 
   it('actualiza datos y foto, y elimina el miembro con su imagen', async () => {
-    const token = await getToken(adminEmail, adminPassword);
-    const created = await createMember(token, {
+    const admin = await signIn(adminEmail, adminPassword);
+    const created = await createMember(admin, {
       name: 'Ana',
       role: 'Coordinadora',
       file: png(),
     }).expect(201);
     const id = created.body.id as string;
 
-    const updated = await request(server)
+    const updated = await admin
       .patch(`/team-members/${id}`)
-      .set('Authorization', bearer(token))
       .field('name', 'Ana Actualizada')
       .attach('image', png(), 'nueva.png')
       .expect(200);
@@ -198,17 +187,11 @@ describe('Team members (e2e)', () => {
     expect(updated.body.imageUrl).toContain('team-members/foto-2');
     expect(deleteMock).toHaveBeenCalledWith('team-members/foto-1');
 
-    await request(server)
-      .delete(`/team-members/${id}`)
-      .set('Authorization', bearer(token))
-      .expect(204);
+    await admin.delete(`/team-members/${id}`).expect(204);
 
     expect(deleteMock).toHaveBeenCalledWith('team-members/foto-2');
 
-    await request(server)
-      .get(`/team-members/${id}`)
-      .set('Authorization', bearer(token))
-      .expect(404);
+    await admin.get(`/team-members/${id}`).expect(404);
 
     const publicList = await request(server).get('/team-members').expect(200);
     expect(publicList.body).not.toEqual(
@@ -217,8 +200,8 @@ describe('Team members (e2e)', () => {
   });
 
   it('responde 502 y conserva la fila si falla el borrado en Cloudinary', async () => {
-    const token = await getToken(adminEmail, adminPassword);
-    const created = await createMember(token, {
+    const admin = await signIn(adminEmail, adminPassword);
+    const created = await createMember(admin, {
       name: 'Ana',
       role: 'Coordinadora',
       file: png(),
@@ -227,15 +210,9 @@ describe('Team members (e2e)', () => {
 
     deleteMock.mockRejectedValue(new Error('Cloudinary caído'));
 
-    await request(server)
-      .delete(`/team-members/${id}`)
-      .set('Authorization', bearer(token))
-      .expect(502);
+    await admin.delete(`/team-members/${id}`).expect(502);
 
-    const conservado = await request(server)
-      .get(`/team-members/${id}`)
-      .set('Authorization', bearer(token))
-      .expect(200);
+    const conservado = await admin.get(`/team-members/${id}`).expect(200);
     expect(conservado.body.id).toBe(id);
     expect(deleteMock).toHaveBeenCalledWith('team-members/foto-1');
   });

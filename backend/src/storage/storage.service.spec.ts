@@ -35,11 +35,11 @@ describe('StorageService', () => {
       .fn()
       .mockResolvedValue({ key: 'clave', url: 'https://cdn/clave' });
     deleteMock = vi.fn().mockResolvedValue(undefined);
-    const adapter: StorageAdapter = {
+    const adapter = {
       upload: uploadMock,
       delete: deleteMock,
       getUrl: vi.fn().mockReturnValue('https://cdn/clave'),
-    };
+    } as unknown as StorageAdapter;
     service = new StorageService(adapter);
   });
 
