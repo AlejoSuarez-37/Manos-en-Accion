@@ -2,11 +2,15 @@ import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import {
   PasswordHasher,
-  TokenService,
-  type IssuedTokens,
+  SessionService,
+  SignInService,
 } from '@nestjs/authentication';
 import { Repository } from 'typeorm';
-import { User, normalizeEmail } from '../users/entities/user.entity.js';
+import {
+  User,
+  normalizeEmail,
+  toPublicUser,
+} from '../users/entities/user.entity.js';
 
 @Injectable()
 export class AuthService {
@@ -14,10 +18,11 @@ export class AuthService {
     @InjectRepository(User)
     private readonly users: Repository<User>,
     private readonly passwordHasher: PasswordHasher,
-    private readonly tokenService: TokenService,
-  ) {}
+    private readonly signInService: SignInService,
+    private readonly sessions: SessionService,
+  ) { }
 
-  async login(email: string, password: string): Promise<IssuedTokens> {
+  async login(email: string, password: string): Promise<User> {
     const found = await this.findCredentialsByEmail(email);
     const valid = await this.passwordHasher.verify(
       password,
@@ -37,7 +42,8 @@ export class AuthService {
       });
     }
 
-    return this.tokenService.issue(found.id, { method: 'password' });
+    await this.signInService.signIn(found.id, { method: 'password' });
+    return toPublicUser(found);
   }
 
   async changePassword(
@@ -58,7 +64,9 @@ export class AuthService {
     await this.users.update(userId, {
       passwordHash: await this.passwordHasher.hash(newPassword),
     });
-    await this.tokenService.revokeAll(userId);
+
+    const rotated = await this.signInService.rotateSession();
+    await this.sessions.revokeAll(userId, { except: rotated?.session.id });
   }
 
   private findCredentialsByEmail(email: string): Promise<User | null> {

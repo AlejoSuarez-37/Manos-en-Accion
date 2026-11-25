@@ -28,3 +28,10 @@ export class User {
 
 export const normalizeEmail = (email: string) =>
   email.trim().normalize('NFC').toLowerCase();
+
+export const toPublicUser = (user: User): User => ({
+  id: user.id,
+  email: user.email,
+  name: user.name,
+  role: user.role,
+});

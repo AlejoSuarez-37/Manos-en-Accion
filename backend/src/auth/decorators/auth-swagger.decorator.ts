@@ -6,7 +6,7 @@ export function ApiLogin() {
     ApiOperation({
       summary: 'Iniciar sesión',
       description:
-        'Valida el correo y la contraseña y devuelve un token de acceso y un token de actualización.',
+        'Valida el correo y la contraseña, crea una sesión y devuelve los datos públicos del usuario en una cookie HttpOnly.',
     }),
     ApiResponse({ status: 200, description: 'Inicio de sesión correcto' }),
     ApiResponse({ status: 400, description: 'Datos inválidos' }),
@@ -14,21 +14,9 @@ export function ApiLogin() {
       status: 401,
       description: 'Correo o contraseña incorrectos',
     }),
-  );
-}
-
-export function ApiRefresh() {
-  return applyDecorators(
-    ApiOperation({
-      summary: 'Renovar tokens',
-      description:
-        'Canjea un token de actualización por un nuevo par de tokens e invalida el anterior.',
-    }),
-    ApiResponse({ status: 200, description: 'Tokens renovados correctamente' }),
-    ApiResponse({ status: 400, description: 'Datos inválidos' }),
     ApiResponse({
-      status: 401,
-      description: 'Token de actualización inválido o expirado',
+      status: 403,
+      description: 'Origen no permitido para iniciar sesión',
     }),
   );
 }
@@ -38,10 +26,10 @@ export function ApiLogout() {
     ApiOperation({
       summary: 'Cerrar sesión',
       description:
-        'Revoca el token de actualización enviado y cierra la sesión actual.',
+        'Elimina la sesión actual y limpia la cookie. No requiere cuerpo.',
     }),
     ApiResponse({ status: 204, description: 'Sesión cerrada correctamente' }),
-    ApiResponse({ status: 400, description: 'Datos inválidos' }),
+    ApiResponse({ status: 403, description: 'Origen no permitido' }),
   );
 }
 
@@ -50,7 +38,7 @@ export function ApiMe() {
     ApiOperation({
       summary: 'Obtener usuario autenticado',
       description:
-        'Devuelve los datos públicos del usuario asociado al token de acceso vigente.',
+        'Devuelve los datos públicos del usuario asociado a la sesión de la cookie.',
     }),
     ApiResponse({
       status: 200,
@@ -65,7 +53,7 @@ export function ApiChangePassword() {
     ApiOperation({
       summary: 'Cambiar contraseña',
       description:
-        'Verifica la contraseña actual, guarda la nueva y revoca todos los tokens del usuario.',
+        'Verifica la contraseña actual, guarda la nueva, rota la sesión actual y cierra las demás.',
     }),
     ApiResponse({
       status: 200,
