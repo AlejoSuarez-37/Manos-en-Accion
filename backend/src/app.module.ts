@@ -17,7 +17,9 @@ import { DropTeamMemberActiveColumn1764240000000 } from './migrations/1764240000
 import { UsersModule } from './users/users.module.js';
 import { TeamMembersModule } from './team/team-members.module.js';
 import { CreateAuthSessionsTable1763740800001 } from './migrations/1763740800001-CreateAuthSessionsTable.js';
-
+import { CreateFocusAreasTable1795737600000 } from './migrations/1795737600000-CreateFocusAreasTable.js';
+import { CreateWorkshopsTable1795737600001 } from './migrations/1795737600001-CreateWorkshopsTable.js';
+import { WorkshopsModule } from './workshops/workshops.module.js';
 
 @Module({
   imports: [
@@ -43,6 +45,8 @@ import { CreateAuthSessionsTable1763740800001 } from './migrations/1763740800001
             CreateTeamMembersTable1764153600000,
             DropTeamMemberActiveColumn1764240000000,
             CreateAuthSessionsTable1763740800001,
+            CreateFocusAreasTable1795737600000,
+            CreateWorkshopsTable1795737600001,
           ],
           migrationsRun: true,
           dropSchema: isTest,
@@ -69,6 +73,7 @@ import { CreateAuthSessionsTable1763740800001 } from './migrations/1763740800001
     ]),
     UsersModule,
     TeamMembersModule,
+    WorkshopsModule,
     AuthenticationModule.forRootAsync({
       imports: [ConfigModule],
       inject: [ConfigService],

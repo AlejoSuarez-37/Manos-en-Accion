@@ -35,20 +35,16 @@ class TeamMember {
     - image: string
 }
 
-enum Status {
-    ACTIVE
-    INACTIVE
-}
-
 class Workshop {
     - title: string
     - description: string
     - image: string
-    - status: Status // Esto hay que consultarle a la ONG si es que es requerido
     - pdf: string | null
+    - pdfName: string | null
 }
 
 class FocusArea {
+    - name: string
     - image: string
     - description: string
     - workshops: Workshop[]
@@ -96,8 +92,10 @@ end note
 
 note left of Workshop
     Los pdf se guardan de la misma forma que las imagenes,
-    guardamos una "key" o "id" que haga referencia al dato guardado en cloudfare.
+    guardamos una "key" o "id" que haga referencia al dato guardado en Cloudinary.
     El campo pdf podra estar vacio asi que implementar teniendo eso en cuenta.
+    pdfName es el nombre visible del adjunto.
+    El estado activo/inactivo quedo deprecado: la baja es fisica con purge.
 end note
 
 note right of Configuration 
@@ -111,7 +109,6 @@ User *-- UserRole
 Publication *-- Category
 BannerImage *-- Image
 Sponsor *-l- Image
-Workshop *-- Status
 FocusArea *-- Workshop
 Donation *-- Configuration
 
