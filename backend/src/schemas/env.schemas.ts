@@ -2,6 +2,16 @@ import { z } from 'zod';
 
 const durationSchema = z.string().regex(/^\d+(?:ms|s|m|h|d|w)$/);
 
+const optionalNonEmpty = z.preprocess(
+  (value) => (value === '' ? undefined : value),
+  z.string().min(1).optional(),
+);
+
+const folderSchema = z.preprocess(
+  (value) => (value === '' ? undefined : value),
+  z.string().min(1).default('manos-en-accion'),
+);
+
 export const envSchema = z
   .object({
     NODE_ENV: z
@@ -17,6 +27,10 @@ export const envSchema = z
     SEED_ADMIN_PASSWORD: z.string().min(12).max(128),
     SEED_EDITOR_EMAIL: z.email().optional(),
     SEED_EDITOR_PASSWORD: z.string().min(12).max(128).optional(),
+    CLOUDINARY_CLOUD_NAME: optionalNonEmpty,
+    CLOUDINARY_API_KEY: optionalNonEmpty,
+    CLOUDINARY_API_SECRET: optionalNonEmpty,
+    CLOUDINARY_FOLDER: folderSchema,
   })
   .passthrough()
   .superRefine((env, context) => {
@@ -42,6 +56,21 @@ export const envSchema = z
       });
     }
 
+    if (env.NODE_ENV !== 'test') {
+      for (const name of [
+        'CLOUDINARY_CLOUD_NAME',
+        'CLOUDINARY_API_KEY',
+        'CLOUDINARY_API_SECRET',
+      ] as const) {
+        if (!env[name]) {
+          context.addIssue({
+            code: 'custom',
+            path: [name],
+            message: `${name} es obligatorio fuera del entorno de pruebas`,
+          });
+        }
+      }
+    }
     if (
       env.NODE_ENV === 'production' &&
       /change[-_]?me|changethis|placeholder/i.test(env.SEED_ADMIN_PASSWORD)
@@ -50,6 +79,7 @@ export const envSchema = z
         code: 'custom',
         message: 'SEED_ADMIN_PASSWORD must not be a placeholder in production',
       });
+
     }
   });
 

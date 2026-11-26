@@ -12,8 +12,12 @@ import { ContentPolicy } from './authorization/content.policy.js';
 import { AdminPolicy } from './authorization/admin.policy.js';
 import { envSchema } from './schemas/env.schemas.js';
 import { CreateUsersTable1763740800000 } from './migrations/1763740800000-CreateUsersTable.js';
+import { CreateTeamMembersTable1764153600000 } from './migrations/1764153600000-CreateTeamMembersTable.js';
+import { DropTeamMemberActiveColumn1764240000000 } from './migrations/1764240000000-DropTeamMemberActiveColumn.js';
 import { UsersModule } from './users/users.module.js';
+import { TeamMembersModule } from './team/team-members.module.js';
 import { CreateAuthSessionsTable1763740800001 } from './migrations/1763740800001-CreateAuthSessionsTable.js';
+
 
 @Module({
   imports: [
@@ -36,6 +40,8 @@ import { CreateAuthSessionsTable1763740800001 } from './migrations/1763740800001
           synchronize: false,
           migrations: [
             CreateUsersTable1763740800000,
+            CreateTeamMembersTable1764153600000,
+            DropTeamMemberActiveColumn1764240000000,
             CreateAuthSessionsTable1763740800001,
           ],
           migrationsRun: true,
@@ -62,6 +68,7 @@ import { CreateAuthSessionsTable1763740800001 } from './migrations/1763740800001
       },
     ]),
     UsersModule,
+    TeamMembersModule,
     AuthenticationModule.forRootAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
