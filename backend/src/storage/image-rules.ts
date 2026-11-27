@@ -7,7 +7,18 @@ export const TEAM_IMAGE_RULE: ImageRule = {
   width: 1000,
   height: 1000,
   folder: 'team-members',
+  crop: 'fill',
+  gravity: 'face',
 };
+
+export const SPONSOR_IMAGE_RULE: ImageRule = {
+  allowedMimes: ['image/jpeg', 'image/png', 'image/webp'],
+  maxBytes: 5 * 1024 * 1024,
+  width: 1000,
+  height: 1000,
+  folder: 'sponsors',
+  crop: 'limit',
+}
 
 const PNG_SIGNATURE = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
 
