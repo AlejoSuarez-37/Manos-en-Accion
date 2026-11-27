@@ -1,8 +1,13 @@
 import {
   buildPublicId,
   detectImageMime,
+  detectPdfMime,
+  hasPdfExtension,
   sanitizeFileName,
   TEAM_IMAGE_RULE,
+  PDF_RULE,
+  WORKSHOP_IMAGE_RULE,
+  FOCUS_AREA_IMAGE_RULE,
 } from './image-rules.js';
 
 describe('reglas de imágenes', () => {
@@ -32,6 +37,19 @@ describe('reglas de imágenes', () => {
     );
   });
 
+  it('reconoce los PDF por su contenido y su extensión', () => {
+    expect(detectPdfMime(Buffer.from('%PDF-1.7'))).toBe('application/pdf');
+    expect(detectPdfMime(Buffer.from('<html></html>'))).toBeUndefined();
+    expect(hasPdfExtension('Programa.PDF')).toBe(true);
+    expect(hasPdfExtension('programa.docx')).toBe(false);
+  });
+
+  it('genera claves de PDF dentro de la carpeta correspondiente', () => {
+    expect(buildPublicId(PDF_RULE, 'Programa del taller.pdf')).toMatch(
+      /^workshops\/pdfs\/programadeltallerpdf-[0-9a-f-]{36}$/,
+    );
+  });
+
   it('define la regla de equipo en 1:1 y hasta 5 MiB', () => {
     expect(TEAM_IMAGE_RULE.width).toBe(1000);
     expect(TEAM_IMAGE_RULE.height).toBe(1000);
@@ -41,5 +59,13 @@ describe('reglas de imágenes', () => {
       'image/png',
       'image/webp',
     ]);
+  });
+
+  it('define reglas separadas para talleres, ejes y PDF', () => {
+    expect(WORKSHOP_IMAGE_RULE.folder).toBe('workshops');
+    expect(FOCUS_AREA_IMAGE_RULE.folder).toBe('focus-areas');
+    expect(PDF_RULE.folder).toBe('workshops/pdfs');
+    expect(PDF_RULE.maxBytes).toBe(10 * 1024 * 1024);
+    expect(PDF_RULE.allowedMimes).toEqual(['application/pdf']);
   });
 });

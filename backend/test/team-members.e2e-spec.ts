@@ -37,8 +37,13 @@ describe('Team members (e2e)', () => {
 
     const adapter = {
       upload: uploadMock,
+      uploadPdf: vi.fn(async (_file: unknown, _mime: string, rule: { folder: string }) => ({
+        key: `${rule.folder}/pdf-${++counter}`,
+        url: `https://cdn.test/${rule.folder}/pdf-${counter}`,
+      })),
       delete: deleteMock,
       getUrl: (key: string) => `https://cdn.test/${key}`,
+      getPdfUrl: (key: string) => `https://cdn.test/${key}`,
     } as unknown as StorageAdapter;
 
     const moduleFixture: TestingModule = await Test.createTestingModule({
@@ -185,11 +190,11 @@ describe('Team members (e2e)', () => {
 
     expect(updated.body.name).toBe('Ana Actualizada');
     expect(updated.body.imageUrl).toContain('team-members/foto-2');
-    expect(deleteMock).toHaveBeenCalledWith('team-members/foto-1');
+    expect(deleteMock).toHaveBeenCalledWith('team-members/foto-1', 'image');
 
     await admin.delete(`/team-members/${id}`).expect(204);
 
-    expect(deleteMock).toHaveBeenCalledWith('team-members/foto-2');
+    expect(deleteMock).toHaveBeenCalledWith('team-members/foto-2', 'image');
 
     await admin.get(`/team-members/${id}`).expect(404);
 
@@ -214,6 +219,6 @@ describe('Team members (e2e)', () => {
 
     const conservado = await admin.get(`/team-members/${id}`).expect(200);
     expect(conservado.body.id).toBe(id);
-    expect(deleteMock).toHaveBeenCalledWith('team-members/foto-1');
+    expect(deleteMock).toHaveBeenCalledWith('team-members/foto-1', 'image');
   });
 });

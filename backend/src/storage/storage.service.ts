@@ -6,12 +6,19 @@ import {
   Logger,
   UnsupportedMediaTypeException,
 } from '@nestjs/common';
-import { detectImageMime } from './image-rules.js';
+import {
+  detectImageMime,
+  detectPdfMime,
+  hasPdfExtension,
+} from './image-rules.js';
 import {
   STORAGE_ADAPTER,
   type ImageRule,
+  type PdfRule,
   type StorageAdapter,
+  type StoredFileType,
   type UploadedImage,
+  type UploadedPdf,
 } from './storage.types.js';
 
 @Injectable()
@@ -51,31 +58,70 @@ export class StorageService {
     }
   }
 
-  async delete(key: string): Promise<void> {
-    try {
-      await this.tryDelete(key);
-    } catch (error) {
-      this.logger.error(`No se pudo eliminar la imagen ${key}`, String(error));
+  async uploadPdf(
+    file: Express.Multer.File | undefined,
+    rule: PdfRule,
+  ): Promise<UploadedPdf> {
+    if (!file) {
+      throw new BadRequestException('Debe adjuntar el PDF en el campo "pdf"');
     }
-  }
 
-  async deleteRequired(key: string): Promise<void> {
+    const mime = detectPdfMime(file.buffer);
+    if (!mime || !rule.allowedMimes.includes(mime)) {
+      throw new UnsupportedMediaTypeException('Solo se permiten archivos PDF');
+    }
+    if (!hasPdfExtension(file.originalname)) {
+      throw new BadRequestException('El archivo debe tener extensión .pdf');
+    }
+    if (file.size > rule.maxBytes) {
+      throw new BadRequestException(
+        `El PDF no debe superar ${rule.maxBytes} bytes`,
+      );
+    }
+
     try {
-      await this.tryDelete(key);
-    } catch (error) {
-      this.logger.error(`No se pudo eliminar la imagen ${key}`, String(error));
+      return await this.adapter.uploadPdf(file, mime, rule);
+    } catch {
       throw new BadGatewayException(
-        'No se pudo eliminar la imagen del almacenamiento',
+        'No se pudo guardar el PDF en el almacenamiento',
       );
     }
   }
 
-  private async tryDelete(key: string): Promise<void> {
+  async delete(
+    key: string,
+    resourceType: StoredFileType = 'image',
+  ): Promise<void> {
+    try {
+      await this.tryDelete(key, resourceType);
+    } catch (error) {
+      this.logger.error(`No se pudo eliminar el archivo ${key}`, String(error));
+    }
+  }
+
+  async deleteRequired(
+    key: string,
+    resourceType: StoredFileType = 'image',
+  ): Promise<void> {
+    try {
+      await this.tryDelete(key, resourceType);
+    } catch (error) {
+      this.logger.error(`No se pudo eliminar el archivo ${key}`, String(error));
+      throw new BadGatewayException(
+        'No se pudo eliminar el archivo del almacenamiento',
+      );
+    }
+  }
+
+  private async tryDelete(
+    key: string,
+    resourceType: StoredFileType,
+  ): Promise<void> {
     let lastError: unknown;
 
     for (let attempt = 1; attempt <= 3; attempt += 1) {
       try {
-        await this.adapter.delete(key);
+        await this.adapter.delete(key, resourceType);
         return;
       } catch (error) {
         lastError = error;
@@ -94,5 +140,9 @@ export class StorageService {
 
   getUrl(key: string, rule: ImageRule): string {
     return this.adapter.getUrl(key, rule);
+  }
+
+  getPdfUrl(key: string, rule: PdfRule, name?: string): string {
+    return this.adapter.getPdfUrl(key, rule, name);
   }
 }

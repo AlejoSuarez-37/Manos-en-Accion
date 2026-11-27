@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import type { ImageRule } from './storage.types.js';
+import type { ImageRule, PdfRule } from './storage.types.js';
 
 export const TEAM_IMAGE_RULE: ImageRule = {
   allowedMimes: ['image/jpeg', 'image/png', 'image/webp'],
@@ -20,6 +20,28 @@ export const SPONSOR_IMAGE_RULE: ImageRule = {
   crop: 'limit',
 }
 
+export const WORKSHOP_IMAGE_RULE: ImageRule = {
+  allowedMimes: ['image/jpeg', 'image/png', 'image/webp'],
+  maxBytes: 5 * 1024 * 1024,
+  width: 1000,
+  height: 1000,
+  folder: 'workshops',
+};
+
+export const FOCUS_AREA_IMAGE_RULE: ImageRule = {
+  allowedMimes: ['image/jpeg', 'image/png', 'image/webp'],
+  maxBytes: 5 * 1024 * 1024,
+  width: 1000,
+  height: 1000,
+  folder: 'focus-areas',
+};
+
+export const PDF_RULE: PdfRule = {
+  allowedMimes: ['application/pdf'],
+  maxBytes: 10 * 1024 * 1024,
+  folder: 'workshops/pdfs',
+};
+
 const PNG_SIGNATURE = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
 
 export const detectImageMime = (bytes: Buffer): string | undefined => {
@@ -39,6 +61,17 @@ export const detectImageMime = (bytes: Buffer): string | undefined => {
   return undefined;
 };
 
+const PDF_SIGNATURE = Buffer.from('%PDF-', 'ascii');
+
+export const detectPdfMime = (bytes: Buffer): string | undefined =>
+  bytes.length >= PDF_SIGNATURE.length &&
+  bytes.subarray(0, PDF_SIGNATURE.length).equals(PDF_SIGNATURE)
+    ? 'application/pdf'
+    : undefined;
+
+export const hasPdfExtension = (originalName: string): boolean =>
+  /\.pdf$/i.test(originalName);
+
 export const sanitizeFileName = (originalName: string): string =>
   originalName
     .normalize('NFKD')
@@ -47,7 +80,7 @@ export const sanitizeFileName = (originalName: string): string =>
     .slice(0, 40);
 
 export const buildPublicId = (
-  rule: ImageRule,
+  rule: { folder: string },
   originalName: string,
 ): string => {
   const base = sanitizeFileName(originalName);

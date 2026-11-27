@@ -1,11 +1,14 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { v2 as cloudinary } from 'cloudinary';
-import { buildPublicId } from './image-rules.js';
+import { buildPublicId, sanitizeFileName } from './image-rules.js';
 import type {
   ImageRule,
+  PdfRule,
   StorageAdapter,
+  StoredFileType,
   UploadedImage,
+  UploadedPdf,
 } from './storage.types.js';
 
 @Injectable()
@@ -35,6 +38,25 @@ export class CloudinaryStorageAdapter implements StorageAdapter {
     return { key: result.public_id, url: this.getUrl(result.public_id, rule) };
   }
 
+  async uploadPdf(
+    file: Express.Multer.File,
+    mime: string,
+    rule: PdfRule,
+  ): Promise<UploadedPdf> {
+    const result = await cloudinary.uploader.upload(
+      `data:${mime};base64,${file.buffer.toString('base64')}`,
+      {
+        public_id: buildPublicId(rule, file.originalname),
+        resource_type: 'raw',
+        overwrite: false,
+      },
+    );
+    return {
+      key: result.public_id,
+      url: this.getPdfUrl(result.public_id, rule),
+    };
+  }
+
   getUrl(key: string, rule: ImageRule): string {
     return cloudinary.url(key, {
       secure: true,
@@ -51,9 +73,20 @@ export class CloudinaryStorageAdapter implements StorageAdapter {
     });
   }
 
-  async delete(key: string): Promise<void> {
+  getPdfUrl(key: string, rule: PdfRule, name?: string): string {
+    return cloudinary.url(key, {
+      secure: true,
+      resource_type: 'raw',
+      flags: name ? `attachment:${sanitizeFileName(name)}` : 'attachment',
+    });
+  }
+
+  async delete(
+    key: string,
+    resourceType: StoredFileType = 'image',
+  ): Promise<void> {
     const result = await cloudinary.uploader.destroy(key, {
-      resource_type: 'image',
+      resource_type: resourceType,
       invalidate: true,
     });
 
