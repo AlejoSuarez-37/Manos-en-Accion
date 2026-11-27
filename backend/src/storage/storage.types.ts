@@ -1,9 +1,13 @@
+export type ImageCrop = 'fill' | 'fit' | 'limit' | 'pad';
+
 export interface ImageRule {
   allowedMimes: readonly string[];
   maxBytes: number;
   width: number;
   height: number;
   folder: string;
+  crop?: ImageCrop;
+  gravity?: 'face' | 'center';
 }
 
 export interface PdfRule {

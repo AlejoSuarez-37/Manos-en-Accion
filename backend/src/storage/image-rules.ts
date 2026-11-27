@@ -7,7 +7,18 @@ export const TEAM_IMAGE_RULE: ImageRule = {
   width: 1000,
   height: 1000,
   folder: 'team-members',
+  crop: 'fill',
+  gravity: 'face',
 };
+
+export const SPONSOR_IMAGE_RULE: ImageRule = {
+  allowedMimes: ['image/jpeg', 'image/png', 'image/webp'],
+  maxBytes: 5 * 1024 * 1024,
+  width: 1000,
+  height: 1000,
+  folder: 'sponsors',
+  crop: 'limit',
+}
 
 export const WORKSHOP_IMAGE_RULE: ImageRule = {
   allowedMimes: ['image/jpeg', 'image/png', 'image/webp'],

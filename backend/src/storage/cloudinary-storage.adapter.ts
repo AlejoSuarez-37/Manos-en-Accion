@@ -65,8 +65,8 @@ export class CloudinaryStorageAdapter implements StorageAdapter {
         {
           width: rule.width,
           height: rule.height,
-          crop: 'fill',
-          gravity: 'face',
+          crop: rule.crop,
+          ...(rule.gravity ? { gravity: rule.gravity } : {}),
         },
         { quality: 'auto', fetch_format: 'auto' },
       ],
