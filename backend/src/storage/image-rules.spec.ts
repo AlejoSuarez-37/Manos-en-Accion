@@ -1,4 +1,5 @@
 import {
+  BANNER_IMAGE_RULE,
   buildPublicId,
   detectImageMime,
   sanitizeFileName,
@@ -37,6 +38,20 @@ describe('reglas de imágenes', () => {
     expect(TEAM_IMAGE_RULE.height).toBe(1000);
     expect(TEAM_IMAGE_RULE.maxBytes).toBe(5 * 1024 * 1024);
     expect(TEAM_IMAGE_RULE.allowedMimes).toEqual([
+      'image/jpeg',
+      'image/png',
+      'image/webp',
+    ]);
+  });
+
+  it('define la regla de banner en 1920x600, recorte central y hasta 5 MiB', () => {
+    expect(BANNER_IMAGE_RULE.width).toBe(1920);
+    expect(BANNER_IMAGE_RULE.height).toBe(600);
+    expect(BANNER_IMAGE_RULE.folder).toBe('banners');
+    expect(BANNER_IMAGE_RULE.crop).toBe('fill');
+    expect(BANNER_IMAGE_RULE.gravity).toBe('center');
+    expect(BANNER_IMAGE_RULE.maxBytes).toBe(5 * 1024 * 1024);
+    expect(BANNER_IMAGE_RULE.allowedMimes).toEqual([
       'image/jpeg',
       'image/png',
       'image/webp',

@@ -19,6 +19,8 @@ import { TeamMembersModule } from './team/team-members.module.js';
 import { CreateAuthSessionsTable1763740800001 } from './migrations/1763740800001-CreateAuthSessionsTable.js';
 import { CreateSponsorsTable1795651200000 } from './migrations/1795651200000-CreateSponsorsTable.js';
 import { SponsorsModule } from './sponsors/sponsors.module.js';
+import { CreateBannersTable1795737600000 } from './migrations/1795737600000-CreateBannersTable.js';
+import { BannersModule } from './banners/banners.module.js';
 
 
 @Module({
@@ -46,6 +48,7 @@ import { SponsorsModule } from './sponsors/sponsors.module.js';
             DropTeamMemberActiveColumn1764240000000,
             CreateAuthSessionsTable1763740800001,
             CreateSponsorsTable1795651200000,
+            CreateBannersTable1795737600000,
           ],
           migrationsRun: true,
           dropSchema: isTest,
@@ -73,6 +76,7 @@ import { SponsorsModule } from './sponsors/sponsors.module.js';
     UsersModule,
     TeamMembersModule,
     SponsorsModule,
+    BannersModule,
     AuthenticationModule.forRootAsync({
       imports: [ConfigModule],
       inject: [ConfigService],

@@ -20,6 +20,16 @@ export const SPONSOR_IMAGE_RULE: ImageRule = {
   crop: 'limit',
 }
 
+export const BANNER_IMAGE_RULE: ImageRule = {
+  allowedMimes: ['image/jpeg', 'image/png', 'image/webp'],
+  maxBytes: 5 * 1024 * 1024,
+  width: 1920,
+  height: 600,
+  folder: 'banners',
+  crop: 'fill',
+  gravity: 'center',
+};
+
 const PNG_SIGNATURE = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
 
 export const detectImageMime = (bytes: Buffer): string | undefined => {
