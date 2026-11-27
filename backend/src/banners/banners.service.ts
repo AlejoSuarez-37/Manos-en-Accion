@@ -93,6 +93,17 @@ export class BannersService {
         if (result.affected === 0) {
             throw new NotFoundException(`Banner ${id} no encontrado`);
         }
+
+        await this.shiftPositionsAfter(banner.position);
+    }
+
+    private async shiftPositionsAfter(deletedPosition: number): Promise<void> {
+        await this.banners
+            .createQueryBuilder()
+            .update(Banner)
+            .set({ position: () => 'position - 1' })
+            .where('position > :deletedPosition', { deletedPosition })
+            .execute();
     }
 
     private async findOneEntity(id: string): Promise<Banner> {

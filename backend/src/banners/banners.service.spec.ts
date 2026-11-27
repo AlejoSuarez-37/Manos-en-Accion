@@ -33,6 +33,13 @@ describe('BannersService', () => {
         find: ReturnType<typeof vi.fn>;
         findOneBy: ReturnType<typeof vi.fn>;
         delete: ReturnType<typeof vi.fn>;
+        createQueryBuilder: ReturnType<typeof vi.fn>;
+    };
+    let updateBuilder: {
+        update: ReturnType<typeof vi.fn>;
+        set: ReturnType<typeof vi.fn>;
+        where: ReturnType<typeof vi.fn>;
+        execute: ReturnType<typeof vi.fn>;
     };
     let storage: {
         uploadImage: ReturnType<typeof vi.fn>;
@@ -43,6 +50,12 @@ describe('BannersService', () => {
     let service: BannersService;
 
     beforeEach(() => {
+        updateBuilder = {
+            update: vi.fn().mockReturnThis(),
+            set: vi.fn().mockReturnThis(),
+            where: vi.fn().mockReturnThis(),
+            execute: vi.fn().mockResolvedValue({ affected: 1, raw: [] }),
+        };
         banners = {
             create: vi.fn((input) => input),
             save: vi.fn(async (input) => ({
@@ -52,6 +65,7 @@ describe('BannersService', () => {
             find: vi.fn().mockResolvedValue([]),
             findOneBy: vi.fn().mockResolvedValue(null),
             delete: vi.fn().mockResolvedValue({ affected: 1 }),
+            createQueryBuilder: vi.fn(() => updateBuilder),
         };
         storage = {
             uploadImage: vi
@@ -186,6 +200,39 @@ describe('BannersService', () => {
         expect(banners.save).not.toHaveBeenCalled();
     });
 
+    it('decrementa en 1 las posiciones posteriores al banner eliminado', async () => {
+        banners.findOneBy.mockResolvedValue(banner({ position: 2 }));
+
+        await service.remove('11111111-1111-1111-1111-111111111111');
+
+        expect(banners.createQueryBuilder).toHaveBeenCalledTimes(1);
+        expect(updateBuilder.update).toHaveBeenCalledWith(Banner);
+        expect(updateBuilder.set).toHaveBeenCalledWith({
+            position: expect.any(Function),
+        });
+        const values = updateBuilder.set.mock.calls[0][0] as {
+            position: () => string;
+        };
+        expect(values.position()).toBe('position - 1');
+        expect(updateBuilder.where).toHaveBeenCalledWith(
+            'position > :deletedPosition',
+            { deletedPosition: 2 },
+        );
+        expect(updateBuilder.execute.mock.invocationCallOrder[0]).toBeGreaterThan(
+            banners.delete.mock.invocationCallOrder[0],
+        );
+    });
+
+    it('no reordena si la fila ya no existía al borrar', async () => {
+        banners.findOneBy.mockResolvedValue(banner());
+        banners.delete.mockResolvedValue({ affected: 0 });
+
+        await expect(
+            service.remove('11111111-1111-1111-1111-111111111111'),
+        ).rejects.toBeInstanceOf(NotFoundException);
+        expect(banners.createQueryBuilder).not.toHaveBeenCalled();
+    });
+
     it('no borra la fila si falla Cloudinary', async () => {
         banners.findOneBy.mockResolvedValue(banner());
         storage.deleteRequired.mockRejectedValue(new Error('Cloudinary caído'));
@@ -194,6 +241,7 @@ describe('BannersService', () => {
             service.remove('11111111-1111-1111-1111-111111111111'),
         ).rejects.toThrow('Cloudinary caído');
         expect(banners.delete).not.toHaveBeenCalled();
+        expect(banners.createQueryBuilder).not.toHaveBeenCalled();
     });
 
     it('lista los banners públicos ordenados por posición', async () => {

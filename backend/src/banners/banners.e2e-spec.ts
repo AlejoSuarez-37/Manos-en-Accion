@@ -192,6 +192,27 @@ describe('Banners (e2e)', () => {
         expect(publicList.body).toEqual([]);
     });
 
+    it('reordena las posiciones posteriores al eliminar y reutiliza el hueco al crear', async () => {
+        const admin = await signIn(adminEmail, adminPassword);
+        const first = await createBanner(admin, png()).expect(201);
+        const second = await createBanner(admin, png()).expect(201);
+        const third = await createBanner(admin, png()).expect(201);
+
+        expect(
+            [first.body.position, second.body.position, third.body.position],
+        ).toEqual([1, 2, 3]);
+
+        await admin.delete(`/banners/${first.body.id}`).expect(204);
+
+        const afterDelete = await request(server).get('/banners').expect(200);
+        expect(
+            afterDelete.body.map((banner: { position: number }) => banner.position),
+        ).toEqual([1, 2]);
+
+        const created = await createBanner(admin, png()).expect(201);
+        expect(created.body.position).toBe(3);
+    });
+
     it('responde 502 y conserva la fila si falla el borrado en Cloudinary', async () => {
         const admin = await signIn(adminEmail, adminPassword);
         const created = await createBanner(admin, png()).expect(201);

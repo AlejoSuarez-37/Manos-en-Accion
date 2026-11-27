@@ -100,7 +100,7 @@ export function ApiDeleteBanner() {
         ApiOperation({
             summary: 'Eliminar un banner',
             description:
-                'Elimina el registro de PostgreSQL y su imagen de Cloudinary. Solo responde 204 si ambas operaciones terminan correctamente.',
+                'Elimina el registro de PostgreSQL y su imagen de Cloudinary. Después decrementa en 1 la posición de los banners que estaban por detrás. Solo responde 204 si todas las operaciones terminan correctamente.',
         }),
         ApiResponse({
             status: 204,
